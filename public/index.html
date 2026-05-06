@@ -1,0 +1,1069 @@
+﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOM Reinigungsmanagement</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2300bfb3'/%3E%3Ctext x='50' y='70' font-family='Arial' font-size='48' font-weight='900' fill='white' text-anchor='middle' letter-spacing='-3'%3EFOM%3C/text%3E%3C/svg%3E">
+<style>
+:root{--primary:#00bfb3;--primary-dark:#008c82;--primary-light:#00d9cc;--gray-50:#f4f6f8;--gray-100:#e5e5e5;--gray-200:#d0d0d0;--gray-400:#8b92a0;--gray-600:#666;--gray-800:#333;--white:#fff;--green:#155724;--green-bg:#d4edda;--red:#721c24;--red-bg:#f8d7da;--yellow:#856404;--yellow-bg:#fff3cd;--purple:#6b35a8;--purple-bg:#f0e8fa;--shadow-sm:0 2px 4px rgba(0,0,0,0.08);--shadow-md:0 4px 12px rgba(0,191,179,0.12);--radius:8px;--radius-lg:12px;--radius-pill:9999px;--font:'Segoe UI',system-ui,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);min-height:100vh;display:flex;flex-direction:column;font-size:15px;line-height:1.6}
+.app{display:flex;flex:1;min-height:100vh}
+.sidebar{width:240px;background:var(--primary);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;z-index:100;border-right:4px solid var(--primary-dark)}
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-sm)}
+.content{padding:28px;flex:1}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.1)}
+.sidebar-logo h1{font-size:15px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:10px}
+.sidebar-logo p{font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
+.sidebar-nav{padding:12px 0;flex:1;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.8px;padding:10px 20px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:rgba(255,255,255,0.8);font-size:13.5px;border:none;background:none;width:100%;text-align:left;transition:all 0.2s}
+.nav-item:hover{background:rgba(255,255,255,0.12);color:var(--white)}
+.nav-item.active{background:rgba(255,255,255,0.2);color:var(--white);font-weight:600;border-left:3px solid var(--white)}
+.nav-icon{font-size:15px;width:20px;text-align:center}
+.sidebar-bottom{padding:14px 20px;border-top:1px solid rgba(255,255,255,0.12)}
+.user-chip{display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--white)}
+.user-name{font-size:13px;color:rgba(255,255,255,0.85)}
+.user-role{font-size:11px;color:rgba(255,255,255,0.45)}
+.topbar-title{font-size:16px;font-weight:600;color:var(--primary)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:var(--radius-pill);font-size:13.5px;font-weight:600;cursor:pointer;border:none;transition:all 0.2s;white-space:nowrap}
+.btn-primary{background:var(--primary);color:var(--white)}.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--white);color:var(--primary);border:2px solid var(--primary)}.btn-secondary:hover{background:var(--gray-50)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid #f5c6cb}.btn-danger:hover{background:#fcd0d0}
+.btn-sm{padding:6px 14px;font-size:12px}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{background:var(--white);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm);border-top:3px solid var(--primary);transition:all 0.3s;cursor:pointer}
+.metric-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.metric-label{font-size:12px;color:var(--gray-600);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+.metric-value{font-size:28px;font-weight:700;color:var(--primary)}
+.card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border-top:3px solid var(--primary)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.card-title{font-size:15px;font-weight:600;color:var(--primary)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{background:var(--primary);color:var(--white);padding:12px 14px;text-align:left;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+tbody tr:hover td{background:rgba(0,191,179,0.08)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:var(--radius-pill);font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge-green{background:var(--green-bg);color:var(--green)}.badge-red{background:var(--red-bg);color:var(--red)}.badge-yellow{background:var(--yellow-bg);color:var(--yellow)}.badge-blue{background:rgba(0,191,179,0.15);color:var(--primary-dark)}.badge-gray{background:var(--gray-100);color:var(--gray-600)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.search-box{position:relative;min-width:180px}.search-box input{width:100%;padding:8px 12px 8px 34px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13.5px;outline:none}.search-box input:focus{border-color:var(--primary)}.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:15px;pointer-events:none}
+select{padding:8px 12px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13.5px;outline:none;cursor:pointer}select:focus{border-color:var(--primary)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center;padding:20px}.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:16px;font-weight:600}
+.modal-close{background:none;border:none;font-size:20px;color:var(--gray-400);cursor:pointer}.modal-close:hover{color:var(--gray-800)}
+.modal-body{padding:20px 24px}.modal-footer{padding:16px 24px;border-top:1px solid var(--gray-100);display:flex;gap:10px;justify-content:flex-end}
+.form-row{margin-bottom:16px}.form-row label{display:block;font-size:12.5px;font-weight:600;color:var(--gray-600);margin-bottom:5px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:10px 14px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:14px;outline:none;font-family:var(--font)}.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--primary)}
+.form-row textarea{resize:vertical;min-height:70px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--gray-800);color:var(--white);padding:12px 18px;border-radius:var(--radius);font-size:13.5px;box-shadow:var(--shadow-md);display:flex;align-items:center;gap:10px;animation:slideIn 0.25s ease;max-width:320px}
+.toast.success{background:var(--green)}.toast.error{background:var(--red)}
+@keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+.page{display:none}.page.active{display:block}
+.alert{padding:12px 16px;border-radius:var(--radius);font-size:13.5px;margin-bottom:16px;border-left:4px solid}
+.alert-info{background:rgba(0,191,179,0.1);border-color:var(--primary);color:var(--primary-dark)}
+.alert-warning{background:var(--yellow-bg);border-color:#d97706;color:var(--yellow)}
+.empty-state{text-align:center;padding:40px 24px;color:var(--gray-400)}
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#00d9cc 0%,#00bfb3 50%,#008c82 100%);z-index:1000;display:flex;align-items:center;justify-content:center}
+.login-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:0 8px 40px rgba(0,0,0,0.25);padding:40px 36px;width:100%;max-width:400px;border-top:4px solid var(--primary-dark)}
+.login-card h1{font-size:20px;font-weight:700;color:var(--primary);margin-bottom:4px;text-align:center}
+.login-card p{font-size:13px;color:var(--gray-600);margin-bottom:24px;text-align:center}
+.login-card .btn-primary{width:100%;justify-content:center;padding:11px 16px;font-size:14px;margin-top:6px}
+.login-error{background:var(--red-bg);color:var(--red);padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:14px;display:none}
+.logout-btn{background:none;border:none;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;padding:4px 0;margin-top:4px}.logout-btn:hover{color:rgba(255,255,255,0.85)}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid var(--gray-100);font-size:13px;color:var(--gray-400)}
+.stars{display:inline-flex;gap:2px}.star{color:var(--gray-200);font-size:18px;cursor:pointer}.star.filled{color:#f59e0b}
+.lv-preview{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:12px;font-size:12px;max-height:300px;overflow:auto;white-space:pre-wrap;font-family:monospace;margin-top:8px}
+</style>
+</head>
+<body>
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">&#128167;</div>
+    <h1>Reinigungsmanagement</h1>
+    <p>Anmelden mit Ihrem AD-Konto</p>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-row"><label>Benutzername</label><input type="text" id="l-user" placeholder="vorname.nachname" autocomplete="username"></div>
+    <div class="form-row"><label>Passwort</label><input type="password" id="l-pass" placeholder="AD-Passwort" autocomplete="current-password"></div>
+    <button class="btn btn-primary" onclick="doLogin()">Anmelden</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo"><h1>&#128167; Reinigung</h1><p>FOM Reinigungsmanagement</p></div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Hauptmenü</div>
+      <button class="nav-item" onclick="navigate('dashboard',this)" id="nav-dashboard"><span class="nav-icon">&#128200;</span>Dashboard</button>
+      <button class="nav-item" onclick="navigate('aufgaben',this)" id="nav-aufgaben"><span class="nav-icon">&#128221;</span>Reinigungsaufgaben</button>
+      <button class="nav-item" onclick="navigate('protokolle',this)" id="nav-protokolle"><span class="nav-icon">&#9989;</span>Protokolle</button>
+      <button class="nav-item" onclick="navigate('lv',this)" id="nav-lv"><span class="nav-icon">&#128196;</span>Leistungsverzeichnisse</button>
+      <div class="nav-section">Stammdaten</div>
+      <button class="nav-item" onclick="navigate('dienstleister',this)" id="nav-dienstleister"><span class="nav-icon">&#127970;</span>Dienstleister</button>
+      <button class="nav-item" onclick="navigate('kontakte',this)" id="nav-kontakte"><span class="nav-icon">&#128100;</span>Kontakte</button>
+      <button class="nav-item" onclick="navigate('standorte',this)" id="nav-standorte"><span class="nav-icon">&#128205;</span>Standorte</button>
+      <div class="nav-section">System</div>
+      <button class="nav-item" onclick="navigate('benutzer',this)" id="nav-benutzer"><span class="nav-icon">&#128101;</span>Benutzer</button>
+      <button class="nav-item" onclick="navigate('berechtigungen',this)" id="nav-berechtigungen"><span class="nav-icon">&#128274;</span>Berechtigungen</button>
+      <button class="nav-item" onclick="navigate('auditlog',this)" id="nav-auditlog"><span class="nav-icon">&#128218;</span>Audit-Log</button>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="user-chip"><div class="user-avatar" id="user-avatar">?</div><div><div class="user-name" id="user-name">—</div><div class="user-role" id="user-role">—</div></div></div>
+      <button class="logout-btn" onclick="doLogout()">Abmelden</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar"><span class="topbar-title" id="topbar-title">Dashboard</span><div class="topbar-right" id="topbar-actions"></div></div>
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="metrics-grid" id="dash-metrics"></div>
+      </div>
+
+      <!-- AUFGABEN -->
+      <div class="page" id="page-aufgaben">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Reinigungsaufgaben</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="auf-q" placeholder="Suche..." oninput="debouncedAufgaben()"></div>
+              <select id="auf-st" onchange="renderAufgaben()"><option value="">Alle Standorte</option></select>
+              <select id="auf-dl" onchange="renderAufgaben()"><option value="">Alle Dienstleister</option></select>
+              <select id="auf-freq" onchange="renderAufgaben()"><option value="">Alle Frequenzen</option><option>täglich</option><option>wöchentlich</option><option>monatlich</option><option>quartalsweise</option><option>jährlich</option></select>
+              <button class="btn btn-secondary btn-sm" onclick="resetFilters('auf')">&#8634; Filter</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Standort</th><th>Bereich</th><th>Tätigkeit</th><th>Frequenz</th><th>Dienstleister</th><th>Ausführender</th><th style="width:90px">Aktionen</th></tr></thead>
+            <tbody id="auf-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- PROTOKOLLE -->
+      <div class="page" id="page-protokolle">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Reinigungsprotokolle</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="prot-q" placeholder="Suche..." oninput="debouncedProtokolle()"></div>
+              <select id="prot-st" onchange="renderProtokolle()"><option value="">Alle Standorte</option></select>
+              <input type="date" id="prot-von" onchange="renderProtokolle()" title="Von">
+              <input type="date" id="prot-bis" onchange="renderProtokolle()" title="Bis">
+              <button class="btn btn-secondary btn-sm" onclick="resetFilters('prot')">&#8634; Filter</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Datum</th><th>Standort</th><th>Dienstleister</th><th>Durchgeführt</th><th>Qualität</th><th>Mängel</th><th style="width:90px">Aktionen</th></tr></thead>
+            <tbody id="prot-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- LEISTUNGSVERZEICHNISSE -->
+      <div class="page" id="page-lv">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Leistungsverzeichnisse</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="lv-q" placeholder="Suche..." oninput="debouncedLV()"></div>
+              <select id="lv-st" onchange="renderLV()"><option value="">Alle Standorte</option></select>
+              <select id="lv-typ" onchange="renderLV()"><option value="">Alle Typen</option><option value="pdf">PDF</option><option value="excel">Excel</option><option value="csv">CSV</option></select>
+              <button class="btn btn-secondary btn-sm" onclick="resetFilters('lv')">&#8634; Filter</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Titel</th><th>Standort</th><th>Typ</th><th>Dienstleister</th><th>Gültig</th><th>Hochgeladen</th><th style="width:90px">Aktionen</th></tr></thead>
+            <tbody id="lv-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- DIENSTLEISTER -->
+      <div class="page" id="page-dienstleister">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Dienstleister</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="dl-q" placeholder="Suche..." oninput="debouncedDL()"></div>
+              <button class="btn btn-secondary btn-sm" onclick="resetFilters('dl')">&#8634; Filter</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Name</th><th>Ansprechpartner</th><th>Telefon</th><th>E-Mail</th><th>Vertrag bis</th><th>Status</th><th style="width:90px">Aktionen</th></tr></thead>
+            <tbody id="dl-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- KONTAKTE -->
+      <div class="page" id="page-kontakte">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Kontakte</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="kt-q" placeholder="Suche..." oninput="debouncedKontakte()"></div>
+              <select id="kt-dl" onchange="renderKontakte()"><option value="">Alle Dienstleister</option></select>
+              <button class="btn btn-secondary btn-sm" onclick="resetFilters('kt')">&#8634; Filter</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Name</th><th>Rolle</th><th>Dienstleister</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th style="width:90px">Aktionen</th></tr></thead>
+            <tbody id="kt-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- STANDORTE -->
+      <div class="page" id="page-standorte">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Standorte</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="st-q" placeholder="Suche..." oninput="renderStandorte()"></div>
+            </div>
+          </div>
+          <div class="card-body" id="st-grid"></div>
+        </div>
+      </div>
+
+      <!-- BENUTZER -->
+      <div class="page" id="page-benutzer">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Benutzer</span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Name</th><th>AD-User</th><th>Rolle</th><th>Standort</th><th>Status</th><th>Letzter Login</th><th style="width:90px">Aktionen</th></tr></thead>
+            <tbody id="usr-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- BERECHTIGUNGEN -->
+      <div class="page" id="page-berechtigungen">
+        <div class="alert alert-info">&#128274; Hier können Super-Admins die Rollenberechtigungen anpassen.</div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Rollenberechtigungen</span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Rolle</th><th>Bereich</th><th style="text-align:center">Lesen</th><th style="text-align:center">Schreiben</th><th style="text-align:center">Löschen</th></tr></thead>
+            <tbody id="perm-tb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- AUDIT-LOG -->
+      <div class="page" id="page-auditlog">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Audit-Log</span>
+            <div class="toolbar">
+              <div class="search-box"><span class="search-icon">&#128269;</span><input type="text" id="al-q" placeholder="Suche..." oninput="debouncedAudit()"></div>
+              <input type="date" id="al-von" onchange="renderAuditLog()">
+              <input type="date" id="al-bis" onchange="renderAuditLog()">
+              <button class="btn btn-secondary btn-sm" onclick="resetFilters('al')">&#8634; Filter</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Zeitstempel</th><th>Aktion</th><th>Benutzer</th><th>Details</th></tr></thead>
+            <tbody id="al-tb"></tbody>
+          </table></div>
+          <div class="pagination"><span id="al-info">—</span><div><button class="btn btn-sm btn-secondary" onclick="alPage--;renderAuditLog()">‹</button> <button class="btn btn-sm btn-secondary" onclick="alPage++;renderAuditLog()">›</button></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+<!-- Modal: Aufgabe -->
+<div class="overlay" id="m-aufgabe">
+  <div class="modal"><div class="modal-header"><h3 id="aufgabe-title">Aufgabe anlegen</h3><button class="modal-close" onclick="closeM('m-aufgabe')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row"><label>Standort *</label><select id="af-st"></select></div>
+        <div class="form-row"><label>Dienstleister</label><select id="af-dl"><option value="">— keiner —</option></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Bereich</label><input type="text" id="af-bereich" placeholder="z.B. Flur EG"></div>
+        <div class="form-row"><label>Raum</label><input type="text" id="af-raum" placeholder="z.B. R101"></div>
+      </div>
+      <div class="form-row"><label>Tätigkeit *</label><input type="text" id="af-taet" placeholder="z.B. Staubwischen, Boden nass wischen"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Frequenz</label><select id="af-freq"><option value="">—</option><option>täglich</option><option>wöchentlich</option><option>monatlich</option><option>quartalsweise</option><option>jährlich</option></select></div>
+        <div class="form-row"><label>Wochentag</label><select id="af-wt"><option value="">—</option><option>Mo</option><option>Di</option><option>Mi</option><option>Do</option><option>Fr</option><option>Sa</option><option>So</option></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Uhrzeit</label><input type="time" id="af-zeit"></div>
+        <div class="form-row"><label>Ausführender</label><input type="text" id="af-aus" placeholder="Name der Person"></div>
+      </div>
+      <div class="form-row"><label>Bemerkung</label><textarea id="af-bem"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-aufgabe')">Abbrechen</button><button class="btn btn-primary" onclick="saveAufgabe()">Speichern</button></div>
+  </div>
+</div>
+
+<!-- Modal: Protokoll -->
+<div class="overlay" id="m-protokoll">
+  <div class="modal"><div class="modal-header"><h3 id="protokoll-title">Protokoll erstellen</h3><button class="modal-close" onclick="closeM('m-protokoll')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-row"><label>Datum *</label><input type="date" id="pr-datum"></div>
+        <div class="form-row"><label>Standort *</label><select id="pr-st"></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Dienstleister</label><select id="pr-dl"><option value="">— keiner —</option></select></div>
+        <div class="form-row"><label>Durchgeführt von</label><input type="text" id="pr-durch" placeholder="Name"></div>
+      </div>
+      <div class="form-row"><label>Qualität (1-5 Sterne)</label><div class="stars" id="pr-stars"></div></div>
+      <div class="form-row"><label>Mängel</label><textarea id="pr-maengel" placeholder="Beschreibung der Mängel..."></textarea></div>
+      <div class="form-row"><label>Bemerkung</label><textarea id="pr-bem"></textarea></div>
+      <div class="form-row"><label>Foto/Dokument</label><input type="file" id="pr-file" accept="image/*,.pdf"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-protokoll')">Abbrechen</button><button class="btn btn-primary" onclick="saveProtokoll()">Speichern</button></div>
+  </div>
+</div>
+
+<!-- Modal: Dienstleister -->
+<div class="overlay" id="m-dl">
+  <div class="modal"><div class="modal-header"><h3 id="dl-title">Dienstleister anlegen</h3><button class="modal-close" onclick="closeM('m-dl')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Firmenname *</label><input type="text" id="d-name" placeholder="z.B. CleanTec GmbH"></div>
+      <div class="form-row"><label>Ansprechpartner</label><input type="text" id="d-ap" placeholder="Vor- und Nachname"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Telefon</label><input type="tel" id="d-tel"></div>
+        <div class="form-row"><label>E-Mail</label><input type="email" id="d-email"></div>
+      </div>
+      <div class="form-row"><label>Adresse</label><input type="text" id="d-adr" placeholder="Straße, PLZ Ort"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Vertrag von</label><input type="date" id="d-vvon"></div>
+        <div class="form-row"><label>Vertrag bis</label><input type="date" id="d-vbis"></div>
+      </div>
+      <div class="form-row"><label>Bemerkung</label><textarea id="d-bem"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-dl')">Abbrechen</button><button class="btn btn-primary" onclick="saveDL()">Speichern</button></div>
+  </div>
+</div>
+
+<!-- Modal: Kontakt -->
+<div class="overlay" id="m-kontakt">
+  <div class="modal"><div class="modal-header"><h3 id="kontakt-title">Kontakt anlegen</h3><button class="modal-close" onclick="closeM('m-kontakt')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Name *</label><input type="text" id="k-name"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Rolle</label><input type="text" id="k-rolle" placeholder="z.B. Objektleiter"></div>
+        <div class="form-row"><label>Dienstleister</label><select id="k-dl"><option value="">— keiner —</option></select></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Telefon</label><input type="tel" id="k-tel"></div>
+        <div class="form-row"><label>Mobil</label><input type="tel" id="k-mobil"></div>
+      </div>
+      <div class="form-row"><label>E-Mail</label><input type="email" id="k-email"></div>
+      <div class="form-row"><label>Bemerkung</label><textarea id="k-bem"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-kontakt')">Abbrechen</button><button class="btn btn-primary" onclick="saveKontakt()">Speichern</button></div>
+  </div>
+</div>
+
+<!-- Modal: LV Upload -->
+<div class="overlay" id="m-lv">
+  <div class="modal" style="max-width:600px"><div class="modal-header"><h3>Leistungsverzeichnis hochladen</h3><button class="modal-close" onclick="closeM('m-lv')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">PDF- oder Excel-Dateien können hochgeladen werden. Excel-Dateien werden automatisch als Tabelle angezeigt, PDFs werden nach Text durchsucht.</div>
+      <div class="form-grid">
+        <div class="form-row"><label>Standort *</label><select id="lvu-st"></select></div>
+        <div class="form-row"><label>Dienstleister</label><select id="lvu-dl"><option value="">— keiner —</option></select></div>
+      </div>
+      <div class="form-row"><label>Titel</label><input type="text" id="lvu-titel" placeholder="z.B. LV Unterhaltsreinigung 2026"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Gültig von</label><input type="date" id="lvu-von"></div>
+        <div class="form-row"><label>Gültig bis</label><input type="date" id="lvu-bis"></div>
+      </div>
+      <div class="form-row"><label>Datei (PDF/Excel) *</label><input type="file" id="lvu-file" accept=".pdf,.xlsx,.xls,.xlsm,.csv"></div>
+      <div class="form-row"><label>Bemerkung</label><textarea id="lvu-bem"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-lv')">Abbrechen</button><button class="btn btn-primary" onclick="uploadLV()">Hochladen</button></div>
+  </div>
+</div>
+
+<!-- Modal: LV Vorschau -->
+<div class="overlay" id="m-lv-preview">
+  <div class="modal" style="max-width:900px"><div class="modal-header"><h3 id="lvp-title">Vorschau</h3><button class="modal-close" onclick="closeM('m-lv-preview')">&#10005;</button></div>
+    <div class="modal-body" id="lvp-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-lv-preview')">Schließen</button><button class="btn btn-primary" id="lvp-import-btn" style="display:none" onclick="importFromLV()">Aufgaben importieren</button></div>
+  </div>
+</div>
+
+<!-- Modal: Benutzer -->
+<div class="overlay" id="m-usr">
+  <div class="modal"><div class="modal-header"><h3 id="usr-title">Benutzer anlegen</h3><button class="modal-close" onclick="closeM('m-usr')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>AD-Benutzer suchen</label><div style="display:flex;gap:8px"><input type="text" id="u-search" placeholder="vorname.nachname" style="flex:1"><button class="btn btn-primary btn-sm" onclick="searchAD()">&#128269;</button></div><div id="u-results" style="margin-top:8px"></div></div>
+      <div class="divider" style="height:1px;background:var(--gray-200);margin:16px 0"></div>
+      <div class="form-grid"><div class="form-row"><label>Vorname</label><input type="text" id="u-vn" readonly style="background:var(--gray-50)"></div><div class="form-row"><label>Nachname</label><input type="text" id="u-nn" readonly style="background:var(--gray-50)"></div></div>
+      <div class="form-row"><label>E-Mail</label><input type="email" id="u-em" readonly style="background:var(--gray-50)"></div>
+      <input type="hidden" id="u-ad">
+      <div class="form-grid">
+        <div class="form-row"><label>Rolle *</label><select id="u-rolle"><option>Super-Admin</option><option>Standortadmin</option><option>Sachbearbeiter</option><option>Lesezugriff</option></select></div>
+        <div class="form-row"><label>Standort</label><select id="u-st"><option value="">Alle</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-usr')">Abbrechen</button><button class="btn btn-primary" onclick="saveUser()">Anlegen</button></div>
+  </div>
+</div>
+
+<!-- Modal: Benutzer bearbeiten -->
+<div class="overlay" id="m-usr-edit">
+  <div class="modal"><div class="modal-header"><h3>Benutzer bearbeiten</h3><button class="modal-close" onclick="closeM('m-usr-edit')">&#10005;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ue-id">
+      <div class="form-row"><label>Name</label><input type="text" id="ue-name" readonly style="background:var(--gray-50)"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Rolle *</label><select id="ue-rolle"><option>Super-Admin</option><option>Standortadmin</option><option>Sachbearbeiter</option><option>Lesezugriff</option></select></div>
+        <div class="form-row"><label>Standort</label><select id="ue-st"><option value="">Alle</option></select></div>
+      </div>
+      <div class="form-row"><label>Status</label><select id="ue-aktiv"><option value="1">Aktiv</option><option value="0">Inaktiv</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeM('m-usr-edit')">Abbrechen</button><button class="btn btn-primary" onclick="saveEditUser()">Speichern</button></div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  GLOBALS
+// ═══════════════════════════════════════════════════════════════════════
+let currentUser = null;
+let perms = {};
+let curPage = 'dashboard';
+let alPage = 1;
+let editAufgabeId = null;
+let editProtokollId = null;
+let editDLId = null;
+let editKontaktId = null;
+let currentLVId = null;
+
+// ─── API Helper ─────────────────────────────────────────────────────
+async function api(url, opts = {}) {
+  const res = await fetch(url, opts);
+  if (res.status === 401) { showLogin(); throw new Error('Nicht authentifiziert'); }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    toast(data.error || 'Fehler', 'error');
+    throw new Error(data.error || res.statusText);
+  }
+  const ct = res.headers.get('content-type');
+  if (ct && ct.includes('json')) return res.json();
+  return res.text();
+}
+
+// ─── Toast ──────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const d = document.createElement('div');
+  d.className = `toast ${type}`;
+  d.textContent = msg;
+  document.getElementById('toasts').appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+// ─── Modal ──────────────────────────────────────────────────────────
+function openM(id) { document.getElementById(id).classList.add('open'); }
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── Escape ─────────────────────────────────────────────────────────
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// ─── Debounce ───────────────────────────────────────────────────────
+function debounce(fn, ms = 300) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+const debouncedAufgaben = debounce(renderAufgaben);
+const debouncedProtokolle = debounce(renderProtokolle);
+const debouncedLV = debounce(renderLV);
+const debouncedDL = debounce(renderDL);
+const debouncedKontakte = debounce(renderKontakte);
+const debouncedAudit = debounce(renderAuditLog);
+
+// ─── Permissions ────────────────────────────────────────────────────
+function kannSchreiben(b) { const p = perms[b]; return p ? p.schreiben === 1 : false; }
+function kannLoeschen(b) { const p = perms[b]; return p ? p.loeschen === 1 : false; }
+function kannLesen(b) { const p = perms[b]; return p ? p.lesen === 1 : false; }
+function istSuperAdmin() { return currentUser && currentUser.rolle === 'Super-Admin'; }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════════════════
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+async function doLogin() {
+  const username = document.getElementById('l-user').value.trim();
+  const password = document.getElementById('l-pass').value;
+  if (!username || !password) { document.getElementById('login-error').style.display = 'block'; document.getElementById('login-error').textContent = 'Bitte Benutzername und Passwort eingeben.'; return; }
+  try {
+    const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById('login-error').style.display = 'block'; document.getElementById('login-error').textContent = d.error || 'Login fehlgeschlagen'; return; }
+    currentUser = d.user;
+    await initApp();
+  } catch (e) { document.getElementById('login-error').style.display = 'block'; document.getElementById('login-error').textContent = 'Verbindungsfehler.'; }
+}
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST' });
+  currentUser = null;
+  showLogin();
+}
+document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('l-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('l-pass').focus(); });
+
+// ─── Init ───────────────────────────────────────────────────────────
+async function initApp() {
+  showApp();
+  // Load permissions
+  const p = await api('/api/berechtigungen-eigene');
+  perms = {};
+  for (const r of p.berechtigungen) perms[r.bereich] = r;
+  // User info
+  document.getElementById('user-name').textContent = currentUser.displayName || currentUser.sAMAccountName;
+  document.getElementById('user-role').textContent = currentUser.rolle;
+  document.getElementById('user-avatar').textContent = (currentUser.displayName || '?').charAt(0).toUpperCase();
+  applyNavPerms();
+  navigate('dashboard');
+}
+
+function applyNavPerms() {
+  const map = { 'nav-aufgaben':'aufgaben','nav-protokolle':'protokolle','nav-lv':'leistungsverzeichnisse','nav-dienstleister':'dienstleister','nav-kontakte':'kontakte','nav-standorte':'standorte','nav-benutzer':'benutzer','nav-berechtigungen':'berechtigungen','nav-auditlog':'auditlog' };
+  for (const [id, bereich] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = kannLesen(bereich) ? '' : 'none';
+  }
+}
+
+// ─── Navigation ─────────────────────────────────────────────────────
+const PAGE_TITLES = { dashboard:'Dashboard', aufgaben:'Reinigungsaufgaben', protokolle:'Protokolle', lv:'Leistungsverzeichnisse', dienstleister:'Dienstleister', kontakte:'Kontakte', standorte:'Standorte', benutzer:'Benutzer', berechtigungen:'Berechtigungen', auditlog:'Audit-Log' };
+
+function navigate(page, btn) {
+  curPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  else { const nb = document.getElementById('nav-' + page); if (nb) nb.classList.add('active'); }
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[page] || page;
+  updateTopbarActions(page);
+  if (page === 'dashboard')       renderDashboard();
+  else if (page === 'aufgaben')   renderAufgaben();
+  else if (page === 'protokolle') renderProtokolle();
+  else if (page === 'lv')         renderLV();
+  else if (page === 'dienstleister') renderDL();
+  else if (page === 'kontakte')   renderKontakte();
+  else if (page === 'standorte')  renderStandorte();
+  else if (page === 'benutzer')   renderBenutzer();
+  else if (page === 'berechtigungen') renderBerechtigungen();
+  else if (page === 'auditlog')   renderAuditLog();
+}
+
+function updateTopbarActions(page) {
+  const ta = document.getElementById('topbar-actions');
+  ta.innerHTML = '';
+  if (page === 'aufgaben' && kannSchreiben('aufgaben')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openAufgabeModal()">+ Aufgabe</button>';
+  if (page === 'protokolle' && kannSchreiben('protokolle')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openProtokollModal()">+ Protokoll</button>';
+  if (page === 'lv' && kannSchreiben('leistungsverzeichnisse')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openLVModal()">+ Hochladen</button>';
+  if (page === 'dienstleister' && kannSchreiben('dienstleister')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openDLModal()">+ Dienstleister</button>';
+  if (page === 'kontakte' && kannSchreiben('kontakte')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openKontaktModal()">+ Kontakt</button>';
+  if (page === 'benutzer' && kannSchreiben('benutzer')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Benutzer</button>';
+  if (page === 'standorte' && kannSchreiben('standorte')) ta.innerHTML = '<button class="btn btn-primary btn-sm" onclick="addStandort()">+ Standort</button>';
+}
+
+function resetFilters(scope) {
+  const setVal = (id, v='') => { const el = document.getElementById(id); if (el) el.value = v; };
+  if (scope === 'auf') { setVal('auf-q'); setVal('auf-st'); setVal('auf-dl'); setVal('auf-freq'); renderAufgaben(); }
+  else if (scope === 'prot') { setVal('prot-q'); setVal('prot-st'); setVal('prot-von'); setVal('prot-bis'); renderProtokolle(); }
+  else if (scope === 'lv') { setVal('lv-q'); setVal('lv-st'); setVal('lv-typ'); renderLV(); }
+  else if (scope === 'dl') { setVal('dl-q'); renderDL(); }
+  else if (scope === 'kt') { setVal('kt-q'); setVal('kt-dl'); renderKontakte(); }
+  else if (scope === 'al') { setVal('al-q'); setVal('al-von'); setVal('al-bis'); alPage = 1; renderAuditLog(); }
+}
+// ═══════════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════
+async function renderDashboard() {
+  try {
+    const s = await api('/api/stats');
+    document.getElementById('dash-metrics').innerHTML = `
+      <div class="metric-card" onclick="navigate('dienstleister')"><div class="metric-label">Dienstleister</div><div class="metric-value">${s.dienstleister}</div></div>
+      <div class="metric-card" onclick="navigate('aufgaben')"><div class="metric-label">Aufgaben (aktiv)</div><div class="metric-value">${s.aufgaben}</div></div>
+      <div class="metric-card" onclick="navigate('lv')"><div class="metric-label">Leistungsverz.</div><div class="metric-value">${s.leistungsverzeichnisse}</div></div>
+      <div class="metric-card" onclick="navigate('protokolle')"><div class="metric-label">Protokolle (30 Tage)</div><div class="metric-value">${s.protokolle_30tg}</div></div>
+      <div class="metric-card"><div class="metric-label">Standorte</div><div class="metric-value">${s.standorte}</div></div>
+      <div class="metric-card"><div class="metric-label">Offene Mängel</div><div class="metric-value" style="${s.maengel_offen > 0 ? 'color:var(--red)' : ''}">${s.maengel_offen}</div></div>`;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  SELECT-Helpers (Standorte + Dienstleister in Dropdowns füllen)
+// ═══════════════════════════════════════════════════════════════════════
+async function fillStandortSelect(selId, includeAll = true) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const standorte = await api('/api/standorte');
+  const cur = sel.value;
+  sel.innerHTML = includeAll ? '<option value="">Alle Standorte</option>' : '';
+  standorte.forEach(s => { const o = document.createElement('option'); o.value = s.name; o.textContent = s.name; sel.appendChild(o); });
+  if (cur) sel.value = cur;
+}
+async function fillDLSelect(selId, includeNone = true) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const dls = await api('/api/dienstleister?aktiv=1');
+  const cur = sel.value;
+  sel.innerHTML = includeNone ? '<option value="">— keiner —</option>' : '';
+  dls.forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; sel.appendChild(o); });
+  if (cur) sel.value = cur;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AUFGABEN
+// ═══════════════════════════════════════════════════════════════════════
+async function renderAufgaben() {
+  fillStandortSelect('auf-st'); fillDLSelect('auf-dl');
+  const q = document.getElementById('auf-q').value;
+  const st = document.getElementById('auf-st').value;
+  const dl = document.getElementById('auf-dl').value;
+  const freq = document.getElementById('auf-freq').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q); if (st) params.set('standort', st); if (dl) params.set('dienstleister_id', dl); if (freq) params.set('frequenz', freq);
+  try {
+    const data = await api(`/api/aufgaben?${params}`);
+    document.getElementById('auf-tb').innerHTML = data.length ? data.map(a => `<tr>
+      <td>${esc(a.standort)}</td><td>${esc(a.bereich || '—')}</td>
+      <td style="font-weight:600">${esc(a.taetigkeit)}</td>
+      <td><span class="badge badge-blue">${esc(a.frequenz || '—')}</span></td>
+      <td>${esc(a.dienstleister_name || '—')}</td><td>${esc(a.ausfuehrender || '—')}</td>
+      <td>${kannSchreiben('aufgaben') ? `<button class="btn btn-secondary btn-sm" onclick="openEditAufgabe(${a.id})">&#9998;</button>` : ''} ${kannLoeschen('aufgaben') ? `<button class="btn btn-sm btn-danger" onclick="deleteAufgabe(${a.id})">&#128465;</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty-state">Keine Aufgaben</div></td></tr>';
+  } catch(e) {}
+}
+
+function openAufgabeModal() {
+  editAufgabeId = null;
+  document.getElementById('aufgabe-title').textContent = 'Aufgabe anlegen';
+  ['af-bereich','af-raum','af-taet','af-zeit','af-aus','af-bem'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('af-freq').value = ''; document.getElementById('af-wt').value = '';
+  fillStandortSelect('af-st', false); fillDLSelect('af-dl');
+  openM('m-aufgabe');
+}
+async function openEditAufgabe(id) {
+  const data = await api('/api/aufgaben'); const a = data.find(x => x.id === id);
+  if (!a) return;
+  editAufgabeId = id;
+  document.getElementById('aufgabe-title').textContent = 'Aufgabe bearbeiten';
+  await fillStandortSelect('af-st', false); await fillDLSelect('af-dl');
+  document.getElementById('af-st').value = a.standort;
+  document.getElementById('af-dl').value = a.dienstleister_id || '';
+  document.getElementById('af-bereich').value = a.bereich || '';
+  document.getElementById('af-raum').value = a.raum || '';
+  document.getElementById('af-taet').value = a.taetigkeit;
+  document.getElementById('af-freq').value = a.frequenz || '';
+  document.getElementById('af-wt').value = a.wochentag || '';
+  document.getElementById('af-zeit').value = a.uhrzeit || '';
+  document.getElementById('af-aus').value = a.ausfuehrender || '';
+  document.getElementById('af-bem').value = a.bemerkung || '';
+  openM('m-aufgabe');
+}
+async function saveAufgabe() {
+  const body = { standort: document.getElementById('af-st').value, dienstleister_id: document.getElementById('af-dl').value || null, bereich: document.getElementById('af-bereich').value.trim(), raum: document.getElementById('af-raum').value.trim(), taetigkeit: document.getElementById('af-taet').value.trim(), frequenz: document.getElementById('af-freq').value, wochentag: document.getElementById('af-wt').value, uhrzeit: document.getElementById('af-zeit').value, ausfuehrender: document.getElementById('af-aus').value.trim(), bemerkung: document.getElementById('af-bem').value.trim() };
+  if (!body.standort || !body.taetigkeit) { toast('Standort und Tätigkeit sind Pflicht', 'error'); return; }
+  try {
+    if (editAufgabeId) await api(`/api/aufgaben/${editAufgabeId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    else await api('/api/aufgaben', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    toast(editAufgabeId ? 'Aufgabe aktualisiert' : 'Aufgabe angelegt');
+    closeM('m-aufgabe'); renderAufgaben();
+  } catch(e) {}
+}
+async function deleteAufgabe(id) { if (!confirm('Aufgabe löschen?')) return; await api(`/api/aufgaben/${id}`, {method:'DELETE'}); toast('Gelöscht'); renderAufgaben(); }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  PROTOKOLLE
+// ═══════════════════════════════════════════════════════════════════════
+async function renderProtokolle() {
+  fillStandortSelect('prot-st');
+  const q = document.getElementById('prot-q').value;
+  const st = document.getElementById('prot-st').value;
+  const von = document.getElementById('prot-von').value;
+  const bis = document.getElementById('prot-bis').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q); if (st) params.set('standort', st); if (von) params.set('von', von); if (bis) params.set('bis', bis);
+  try {
+    const data = await api(`/api/protokolle?${params}`);
+    document.getElementById('prot-tb').innerHTML = data.length ? data.map(p => `<tr>
+      <td>${esc(p.datum)}</td><td>${esc(p.standort)}</td><td>${esc(p.dienstleister_name || '—')}</td>
+      <td>${esc(p.durchgefuehrt_von || '—')}</td>
+      <td>${starsHTML(p.qualitaet)}</td>
+      <td>${p.maengel ? `<span class="badge badge-red">${esc(p.maengel.substring(0,40))}${p.maengel.length>40?'...':''}</span>` : '<span class="badge badge-green">OK</span>'}</td>
+      <td>${kannSchreiben('protokolle') ? `<button class="btn btn-secondary btn-sm" onclick="openEditProtokoll(${p.id})">&#9998;</button>` : ''} ${kannLoeschen('protokolle') ? `<button class="btn btn-sm btn-danger" onclick="deleteProtokoll(${p.id})">&#128465;</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty-state">Keine Protokolle</div></td></tr>';
+  } catch(e) {}
+}
+function starsHTML(n) { let h = ''; for (let i=1;i<=5;i++) h += `<span style="color:${i<=n?'#f59e0b':'var(--gray-200)'}">&#9733;</span>`; return h; }
+
+function openProtokollModal() {
+  editProtokollId = null;
+  document.getElementById('protokoll-title').textContent = 'Protokoll erstellen';
+  document.getElementById('pr-datum').value = new Date().toISOString().slice(0,10);
+  ['pr-durch','pr-maengel','pr-bem'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pr-file').value = '';
+  fillStandortSelect('pr-st', false); fillDLSelect('pr-dl');
+  initStars(0);
+  openM('m-protokoll');
+}
+async function openEditProtokoll(id) {
+  const data = await api('/api/protokolle'); const p = data.find(x => x.id === id);
+  if (!p) return;
+  editProtokollId = id;
+  document.getElementById('protokoll-title').textContent = 'Protokoll bearbeiten';
+  await fillStandortSelect('pr-st', false); await fillDLSelect('pr-dl');
+  document.getElementById('pr-st').value = p.standort;
+  document.getElementById('pr-dl').value = p.dienstleister_id || '';
+  document.getElementById('pr-datum').value = p.datum;
+  document.getElementById('pr-durch').value = p.durchgefuehrt_von || '';
+  document.getElementById('pr-maengel').value = p.maengel || '';
+  document.getElementById('pr-bem').value = p.bemerkung || '';
+  initStars(p.qualitaet || 0);
+  openM('m-protokoll');
+}
+let prQual = 0;
+function initStars(n) {
+  prQual = n;
+  const c = document.getElementById('pr-stars');
+  c.innerHTML = '';
+  for (let i=1;i<=5;i++) { const s = document.createElement('span'); s.className = 'star' + (i<=n?' filled':''); s.innerHTML = '&#9733;'; s.onclick = () => initStars(i); c.appendChild(s); }
+}
+async function saveProtokoll() {
+  const body = { datum: document.getElementById('pr-datum').value, standort: document.getElementById('pr-st').value, dienstleister_id: document.getElementById('pr-dl').value || null, durchgefuehrt_von: document.getElementById('pr-durch').value.trim(), qualitaet: prQual, maengel: document.getElementById('pr-maengel').value.trim(), bemerkung: document.getElementById('pr-bem').value.trim() };
+  if (!body.datum || !body.standort) { toast('Datum und Standort sind Pflicht', 'error'); return; }
+  try {
+    if (editProtokollId) await api(`/api/protokolle/${editProtokollId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    else { const r = await api('/api/protokolle', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); }
+    // Upload file if present
+    const file = document.getElementById('pr-file').files[0];
+    if (file && !editProtokollId) {
+      // We need the ID of just created protokoll - quick workaround:
+      const all = await api('/api/protokolle');
+      const newest = all[0];
+      if (newest) { const fd = new FormData(); fd.append('datei', file); await fetch(`/api/protokolle/${newest.id}/upload`, { method:'POST', body: fd }); }
+    }
+    toast(editProtokollId ? 'Protokoll aktualisiert' : 'Protokoll erstellt');
+    closeM('m-protokoll'); renderProtokolle();
+  } catch(e) {}
+}
+async function deleteProtokoll(id) { if (!confirm('Protokoll löschen?')) return; await api(`/api/protokolle/${id}`, {method:'DELETE'}); toast('Gelöscht'); renderProtokolle(); }
+// ═══════════════════════════════════════════════════════════════════════
+//  LEISTUNGSVERZEICHNISSE
+// ═══════════════════════════════════════════════════════════════════════
+async function renderLV() {
+  fillStandortSelect('lv-st');
+  const q = document.getElementById('lv-q').value;
+  const st = document.getElementById('lv-st').value;
+  const typ = document.getElementById('lv-typ').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q); if (st) params.set('standort', st); if (typ) params.set('typ', typ);
+  try {
+    const data = await api(`/api/leistungsverzeichnisse?${params}`);
+    document.getElementById('lv-tb').innerHTML = data.length ? data.map(l => `<tr>
+      <td style="font-weight:600">${esc(l.titel || l.dateiname)}</td>
+      <td>${esc(l.standort)}</td>
+      <td><span class="badge badge-${l.typ==='pdf'?'red':l.typ==='excel'?'green':'gray'}">${esc(l.typ)}</span></td>
+      <td>${esc(l.dienstleister_name || '—')}</td>
+      <td style="font-size:12px">${l.gueltig_von ? esc(l.gueltig_von)+' – '+(l.gueltig_bis||'∞') : '—'}</td>
+      <td style="font-size:12px">${esc(l.hochgeladen_am?.slice(0,10) || '')}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="previewLV(${l.id})" title="Vorschau">&#128065;</button>
+        <a href="/api/leistungsverzeichnisse/${l.id}/download" class="btn btn-secondary btn-sm" title="Download">&#8595;</a>
+        ${kannLoeschen('leistungsverzeichnisse') ? `<button class="btn btn-sm btn-danger" onclick="deleteLV(${l.id})">&#128465;</button>` : ''}
+      </td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty-state">Keine Leistungsverzeichnisse</div></td></tr>';
+  } catch(e) {}
+}
+
+function openLVModal() {
+  ['lvu-titel','lvu-von','lvu-bis','lvu-bem'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('lvu-file').value = '';
+  fillStandortSelect('lvu-st', false); fillDLSelect('lvu-dl');
+  openM('m-lv');
+}
+async function uploadLV() {
+  const file = document.getElementById('lvu-file').files[0];
+  if (!file) { toast('Bitte Datei auswählen', 'error'); return; }
+  const st = document.getElementById('lvu-st').value;
+  if (!st) { toast('Standort wählen', 'error'); return; }
+  const fd = new FormData();
+  fd.append('datei', file);
+  fd.append('standort', st);
+  fd.append('dienstleister_id', document.getElementById('lvu-dl').value);
+  fd.append('titel', document.getElementById('lvu-titel').value.trim());
+  fd.append('gueltig_von', document.getElementById('lvu-von').value);
+  fd.append('gueltig_bis', document.getElementById('lvu-bis').value);
+  fd.append('bemerkung', document.getElementById('lvu-bem').value.trim());
+  try {
+    const r = await fetch('/api/leistungsverzeichnisse/upload', { method:'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) { toast(d.error || 'Fehler', 'error'); return; }
+    toast('Hochgeladen');
+    closeM('m-lv'); renderLV();
+    if (d.typ === 'excel' && d.parsedRows) {
+      currentLVId = d.id;
+      showLVPreview(d.id, d.parsedRows);
+    }
+  } catch(e) { toast('Upload-Fehler', 'error'); }
+}
+async function previewLV(id) {
+  currentLVId = id;
+  try {
+    const d = await api(`/api/leistungsverzeichnisse/${id}/parse`);
+    document.getElementById('lvp-title').textContent = 'Vorschau';
+    if (d.typ === 'excel' && d.rows) showLVPreview(id, d.rows);
+    else { document.getElementById('lvp-body').innerHTML = `<div class="lv-preview">${esc(d.text || 'Kein Text extrahiert')}</div>`; document.getElementById('lvp-import-btn').style.display = 'none'; }
+    openM('m-lv-preview');
+  } catch(e) {}
+}
+function showLVPreview(id, rows) {
+  if (!rows || rows.length === 0) { document.getElementById('lvp-body').innerHTML = '<p>Keine Daten</p>'; document.getElementById('lvp-import-btn').style.display = 'none'; openM('m-lv-preview'); return; }
+  let html = '<div class="table-wrap" style="max-height:400px;overflow:auto"><table><thead><tr>';
+  const headers = rows[0];
+  for (const h of headers) html += `<th>${esc(String(h))}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let i = 1; i < Math.min(rows.length, 100); i++) {
+    html += '<tr>';
+    for (const c of rows[i]) html += `<td style="font-size:12px">${esc(String(c))}</td>`;
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  if (rows.length > 100) html += `<p style="color:var(--gray-400);font-size:12px;margin-top:8px">(${rows.length-1} Zeilen insgesamt, Vorschau auf 100 begrenzt)</p>`;
+  document.getElementById('lvp-body').innerHTML = html;
+  document.getElementById('lvp-import-btn').style.display = kannSchreiben('aufgaben') ? '' : 'none';
+  openM('m-lv-preview');
+}
+async function importFromLV() {
+  if (!currentLVId) return;
+  toast('Import-Funktion: Bitte Aufgaben manuell oder per zukünftiger Mapping-Funktion importieren.', 'warning');
+}
+async function deleteLV(id) { if (!confirm('Leistungsverzeichnis löschen?')) return; await api(`/api/leistungsverzeichnisse/${id}`, {method:'DELETE'}); toast('Gelöscht'); renderLV(); }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DIENSTLEISTER
+// ═══════════════════════════════════════════════════════════════════════
+async function renderDL() {
+  const q = document.getElementById('dl-q').value;
+  const params = new URLSearchParams(); if (q) params.set('q', q);
+  try {
+    const data = await api(`/api/dienstleister?${params}`);
+    document.getElementById('dl-tb').innerHTML = data.length ? data.map(d => `<tr>
+      <td style="font-weight:600">${esc(d.name)}</td>
+      <td>${esc(d.ansprechpartner || '—')}</td><td>${esc(d.telefon || '—')}</td><td>${esc(d.email || '—')}</td>
+      <td>${d.vertrag_bis ? esc(d.vertrag_bis) : '—'}</td>
+      <td>${d.aktiv ? '<span class="badge badge-green">Aktiv</span>' : '<span class="badge badge-gray">Inaktiv</span>'}</td>
+      <td>${kannSchreiben('dienstleister') ? `<button class="btn btn-secondary btn-sm" onclick="openEditDL(${d.id})">&#9998;</button>` : ''} ${kannLoeschen('dienstleister') ? `<button class="btn btn-sm btn-danger" onclick="deleteDL(${d.id})">&#128465;</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty-state">Keine Dienstleister</div></td></tr>';
+  } catch(e) {}
+}
+function openDLModal() { editDLId = null; document.getElementById('dl-title').textContent = 'Dienstleister anlegen'; ['d-name','d-ap','d-tel','d-email','d-adr','d-vvon','d-vbis','d-bem'].forEach(id => document.getElementById(id).value = ''); openM('m-dl'); }
+async function openEditDL(id) {
+  const data = await api('/api/dienstleister'); const d = data.find(x => x.id === id); if (!d) return;
+  editDLId = id; document.getElementById('dl-title').textContent = 'Dienstleister bearbeiten';
+  document.getElementById('d-name').value = d.name; document.getElementById('d-ap').value = d.ansprechpartner||''; document.getElementById('d-tel').value = d.telefon||''; document.getElementById('d-email').value = d.email||''; document.getElementById('d-adr').value = d.adresse||''; document.getElementById('d-vvon').value = d.vertrag_von||''; document.getElementById('d-vbis').value = d.vertrag_bis||''; document.getElementById('d-bem').value = d.bemerkung||'';
+  openM('m-dl');
+}
+async function saveDL() {
+  const body = { name: document.getElementById('d-name').value.trim(), ansprechpartner: document.getElementById('d-ap').value.trim(), telefon: document.getElementById('d-tel').value.trim(), email: document.getElementById('d-email').value.trim(), adresse: document.getElementById('d-adr').value.trim(), vertrag_von: document.getElementById('d-vvon').value, vertrag_bis: document.getElementById('d-vbis').value, bemerkung: document.getElementById('d-bem').value.trim() };
+  if (!body.name) { toast('Firmenname fehlt', 'error'); return; }
+  try {
+    if (editDLId) await api(`/api/dienstleister/${editDLId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    else await api('/api/dienstleister', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    toast(editDLId ? 'Aktualisiert' : 'Angelegt'); closeM('m-dl'); renderDL();
+  } catch(e) {}
+}
+async function deleteDL(id) { if (!confirm('Dienstleister löschen?')) return; try { await api(`/api/dienstleister/${id}`, {method:'DELETE'}); toast('Gelöscht'); renderDL(); } catch(e) {} }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  KONTAKTE
+// ═══════════════════════════════════════════════════════════════════════
+async function renderKontakte() {
+  fillDLSelect('kt-dl');
+  const q = document.getElementById('kt-q').value;
+  const dl = document.getElementById('kt-dl').value;
+  const params = new URLSearchParams(); if (q) params.set('q', q); if (dl) params.set('dienstleister_id', dl);
+  try {
+    const data = await api(`/api/kontakte?${params}`);
+    document.getElementById('kt-tb').innerHTML = data.length ? data.map(k => `<tr>
+      <td style="font-weight:600">${esc(k.name)}</td><td>${esc(k.rolle||'—')}</td><td>${esc(k.dienstleister_name||'—')}</td>
+      <td>${esc(k.telefon||'—')}</td><td>${esc(k.mobil||'—')}</td><td>${esc(k.email||'—')}</td>
+      <td>${kannSchreiben('kontakte') ? `<button class="btn btn-secondary btn-sm" onclick="openEditKontakt(${k.id})">&#9998;</button>` : ''} ${kannLoeschen('kontakte') ? `<button class="btn btn-sm btn-danger" onclick="deleteKontakt(${k.id})">&#128465;</button>` : ''}</td>
+    </tr>`).join('') : '<tr><td colspan="7"><div class="empty-state">Keine Kontakte</div></td></tr>';
+  } catch(e) {}
+}
+function openKontaktModal() { editKontaktId = null; document.getElementById('kontakt-title').textContent = 'Kontakt anlegen'; ['k-name','k-rolle','k-tel','k-mobil','k-email','k-bem'].forEach(id => document.getElementById(id).value = ''); fillDLSelect('k-dl'); openM('m-kontakt'); }
+async function openEditKontakt(id) {
+  const data = await api('/api/kontakte'); const k = data.find(x => x.id === id); if (!k) return;
+  editKontaktId = id; document.getElementById('kontakt-title').textContent = 'Kontakt bearbeiten';
+  await fillDLSelect('k-dl'); document.getElementById('k-dl').value = k.dienstleister_id||'';
+  document.getElementById('k-name').value = k.name; document.getElementById('k-rolle').value = k.rolle||''; document.getElementById('k-tel').value = k.telefon||''; document.getElementById('k-mobil').value = k.mobil||''; document.getElementById('k-email').value = k.email||''; document.getElementById('k-bem').value = k.bemerkung||'';
+  openM('m-kontakt');
+}
+async function saveKontakt() {
+  const body = { name: document.getElementById('k-name').value.trim(), rolle: document.getElementById('k-rolle').value.trim(), dienstleister_id: document.getElementById('k-dl').value||null, telefon: document.getElementById('k-tel').value.trim(), mobil: document.getElementById('k-mobil').value.trim(), email: document.getElementById('k-email').value.trim(), bemerkung: document.getElementById('k-bem').value.trim() };
+  if (!body.name) { toast('Name fehlt', 'error'); return; }
+  try {
+    if (editKontaktId) await api(`/api/kontakte/${editKontaktId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    else await api('/api/kontakte', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    toast(editKontaktId ? 'Aktualisiert' : 'Angelegt'); closeM('m-kontakt'); renderKontakte();
+  } catch(e) {}
+}
+async function deleteKontakt(id) { if (!confirm('Kontakt löschen?')) return; try { await api(`/api/kontakte/${id}`, {method:'DELETE'}); toast('Gelöscht'); renderKontakte(); } catch(e) {} }
+// ═══════════════════════════════════════════════════════════════════════
+//  STANDORTE
+// ═══════════════════════════════════════════════════════════════════════
+async function renderStandorte() {
+  const q = (document.getElementById('st-q').value || '').toLowerCase();
+  try {
+    let data = await api('/api/standorte');
+    if (q) data = data.filter(s => s.name.toLowerCase().includes(q));
+    document.getElementById('st-grid').innerHTML = data.length
+      ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">${data.map(s => `<div style="background:var(--white);border:1px solid var(--gray-200);border-top:3px solid var(--primary);border-radius:var(--radius);padding:14px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600">${esc(s.name)}</span>${kannSchreiben('standorte') ? `<button class="btn btn-secondary btn-sm" onclick="editStandort('${esc(s.name)}')" style="padding:4px 8px">&#9998;</button>` : ''}</div>`).join('')}</div>`
+      : '<div class="empty-state">Keine Standorte</div>';
+  } catch(e) {}
+}
+async function addStandort() {
+  const name = prompt('Neuer Standortname:');
+  if (!name || !name.trim()) return;
+  try { await api('/api/standorte', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name: name.trim() }) }); toast('Standort angelegt'); renderStandorte(); } catch(e) {}
+}
+async function editStandort(name) {
+  const newName = prompt('Standort umbenennen:', name);
+  if (!newName || newName.trim() === name) return;
+  try { await api(`/api/standorte/${encodeURIComponent(name)}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ newName: newName.trim() }) }); toast('Umbenannt'); renderStandorte(); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BENUTZER
+// ═══════════════════════════════════════════════════════════════════════
+async function renderBenutzer() {
+  try {
+    const data = await api('/api/benutzer');
+    document.getElementById('usr-tb').innerHTML = data.map(u => `<tr>
+      <td style="font-weight:600">${esc(u.name)}</td><td>${esc(u.ad_user||'—')}</td>
+      <td><span class="badge badge-blue">${esc(u.rolle)}</span></td>
+      <td>${esc(u.standort||'Alle')}</td>
+      <td>${u.aktiv ? '<span class="badge badge-green">Aktiv</span>' : '<span class="badge badge-gray">Inaktiv</span>'}</td>
+      <td style="font-size:12px">${u.letzter_login ? esc(u.letzter_login.slice(0,16).replace('T',' ')) : '—'}</td>
+      <td>${kannSchreiben('benutzer') ? `<button class="btn btn-secondary btn-sm" onclick="openEditUser(${u.id})">&#9998;</button>` : ''}</td>
+    </tr>`).join('');
+  } catch(e) {}
+}
+function openUserModal() { document.getElementById('usr-title').textContent = 'Benutzer anlegen'; ['u-search','u-vn','u-nn','u-em','u-ad'].forEach(id => document.getElementById(id).value = ''); document.getElementById('u-results').innerHTML = ''; document.getElementById('u-rolle').value = 'Sachbearbeiter'; fillStandortSelect('u-st'); openM('m-usr'); }
+async function searchAD() {
+  const q = document.getElementById('u-search').value.trim();
+  if (q.length < 2) { toast('Mindestens 2 Zeichen', 'error'); return; }
+  try {
+    const users = await api('/api/ad-search', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ query: q }) });
+    document.getElementById('u-results').innerHTML = users.length ? users.map(u => `<div style="padding:6px 10px;border:1px solid var(--gray-200);border-radius:6px;margin-bottom:4px;cursor:pointer;font-size:13px" onclick="selectADUser(this)" data-sam="${esc(u.sAMAccountName)}" data-dn="${esc(u.displayName)}" data-mail="${esc(u.mail)}" data-gn="${esc(u.givenName)}" data-sn="${esc(u.sn)}"><strong>${esc(u.displayName)}</strong> <span style="color:var(--gray-400)">(${esc(u.sAMAccountName)})</span></div>`).join('') : '<p style="color:var(--gray-400);font-size:12px">Keine Ergebnisse</p>';
+  } catch(e) {}
+}
+function selectADUser(el) {
+  document.getElementById('u-vn').value = el.dataset.gn || '';
+  document.getElementById('u-nn').value = el.dataset.sn || '';
+  document.getElementById('u-em').value = el.dataset.mail || '';
+  document.getElementById('u-ad').value = el.dataset.sam || '';
+}
+async function saveUser() {
+  const ad = document.getElementById('u-ad').value;
+  const vn = document.getElementById('u-vn').value.trim();
+  const nn = document.getElementById('u-nn').value.trim();
+  const name = (vn && nn) ? `${vn} ${nn}` : vn || nn || ad;
+  if (!name) { toast('Bitte AD-User suchen und auswählen', 'error'); return; }
+  const body = { ad_user: ad, name, email: document.getElementById('u-em').value, rolle: document.getElementById('u-rolle').value, standort: document.getElementById('u-st').value };
+  try { await api('/api/benutzer', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); toast('Benutzer angelegt'); closeM('m-usr'); renderBenutzer(); } catch(e) {}
+}
+async function openEditUser(id) {
+  const data = await api('/api/benutzer'); const u = data.find(x => x.id === id); if (!u) return;
+  document.getElementById('ue-id').value = id;
+  document.getElementById('ue-name').value = u.name;
+  document.getElementById('ue-rolle').value = u.rolle;
+  await fillStandortSelect('ue-st'); document.getElementById('ue-st').value = u.standort || '';
+  document.getElementById('ue-aktiv').value = u.aktiv ? '1' : '0';
+  openM('m-usr-edit');
+}
+async function saveEditUser() {
+  const id = document.getElementById('ue-id').value;
+  const body = { rolle: document.getElementById('ue-rolle').value, standort: document.getElementById('ue-st').value, aktiv: document.getElementById('ue-aktiv').value === '1' ? 1 : 0 };
+  try { await api(`/api/benutzer/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); toast('Gespeichert'); closeM('m-usr-edit'); renderBenutzer(); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BERECHTIGUNGEN
+// ═══════════════════════════════════════════════════════════════════════
+async function renderBerechtigungen() {
+  try {
+    const data = await api('/api/berechtigungen');
+    const bereichLabels = { dashboard:'Dashboard', standorte:'Standorte', dienstleister:'Dienstleister', kontakte:'Kontakte', leistungsverzeichnisse:'Leistungsverz.', aufgaben:'Aufgaben', protokolle:'Protokolle', benutzer:'Benutzer', auditlog:'Audit-Log', berechtigungen:'Berechtigungen' };
+    document.getElementById('perm-tb').innerHTML = data.map(p => `<tr>
+      <td><span class="badge badge-blue">${esc(p.rolle)}</span></td>
+      <td>${bereichLabels[p.bereich] || p.bereich}</td>
+      <td style="text-align:center"><input type="checkbox" ${p.lesen?'checked':''} onchange="updatePerm(${p.id},'lesen',this.checked)" ${istSuperAdmin()?'':'disabled'}></td>
+      <td style="text-align:center"><input type="checkbox" ${p.schreiben?'checked':''} onchange="updatePerm(${p.id},'schreiben',this.checked)" ${istSuperAdmin()?'':'disabled'}></td>
+      <td style="text-align:center"><input type="checkbox" ${p.loeschen?'checked':''} onchange="updatePerm(${p.id},'loeschen',this.checked)" ${istSuperAdmin()?'':'disabled'}></td>
+    </tr>`).join('');
+  } catch(e) {}
+}
+async function updatePerm(id, field, val) {
+  // read current state first
+  const data = await api('/api/berechtigungen');
+  const cur = data.find(p => p.id === id);
+  if (!cur) return;
+  const body = { lesen: cur.lesen, schreiben: cur.schreiben, loeschen: cur.loeschen };
+  body[field] = val ? 1 : 0;
+  try { await api(`/api/berechtigungen/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) }); toast('Berechtigung gespeichert'); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AUDIT-LOG
+// ═══════════════════════════════════════════════════════════════════════
+async function renderAuditLog() {
+  const q = document.getElementById('al-q').value;
+  const von = document.getElementById('al-von').value;
+  const bis = document.getElementById('al-bis').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q); if (von) params.set('von', von); if (bis) params.set('bis', bis);
+  params.set('page', alPage); params.set('limit', 50);
+  try {
+    const d = await api(`/api/auditlog?${params}`);
+    document.getElementById('al-tb').innerHTML = d.rows.length ? d.rows.map(r => `<tr>
+      <td style="font-size:12px">${esc(r.zeitstempel?.slice(0,19).replace('T',' '))}</td>
+      <td><span class="badge badge-blue">${esc(r.aktion)}</span></td>
+      <td>${esc(r.benutzer||'—')}</td>
+      <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.details||'')}">${esc(r.details||'—')}</td>
+    </tr>`).join('') : '<tr><td colspan="4"><div class="empty-state">Keine Einträge</div></td></tr>';
+    document.getElementById('al-info').textContent = `Seite ${d.page} – ${d.total} Einträge`;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════════
+(async () => {
+  try {
+    const me = await fetch('/api/me');
+    if (me.ok) { currentUser = await me.json(); await initApp(); }
+    else showLogin();
+  } catch(e) { showLogin(); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules/
+*.log
+reinigung.db
+uploads/*
+!uploads/.gitkeep
+.env
+.DS_Store
+Thumbs.db

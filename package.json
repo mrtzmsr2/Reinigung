@@ -1,0 +1,20 @@
+{
+  "name": "reinigungsmanagement",
+  "version": "1.0.0",
+  "description": "FOM Reinigungsmanagement – Verwaltung von Leistungsverzeichnissen, Dienstleistern, Reinigungsaufgaben und Protokollen",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.0",
+    "express-session": "^1.18.0",
+    "ldapjs": "^3.0.7",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "sql.js": "^1.11.0",
+    "xlsx": "^0.18.5"
+  }
+}
