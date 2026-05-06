@@ -500,6 +500,144 @@ app.post('/api/leistungsverzeichnisse/:id/import-aufgaben', requirePerm('aufgabe
   res.json({ success: true, imported });
 });
 
+// ── Aufgaben aus PDF-Text extrahieren ───────────────────────────────────────
+app.post('/api/leistungsverzeichnisse/:id/extract-aufgaben', requirePerm('aufgaben','schreiben'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const lv = get('SELECT * FROM leistungsverzeichnisse WHERE id = ?', id);
+  if (!lv) return res.status(404).json({ error: 'LV nicht gefunden' });
+
+  let text = lv.extrahierter_text || '';
+  // Falls kein Text gespeichert, erneut parsen
+  if (!text && lv.typ === 'pdf') {
+    const file = path.join(UPLOADS_DIR, lv.datei_pfad);
+    if (fs.existsSync(file)) {
+      try {
+        const buf = fs.readFileSync(file);
+        const result = await pdfParse(buf);
+        text = (result.text || '').trim();
+      } catch(e) { return res.status(500).json({ error: 'PDF konnte nicht gelesen werden' }); }
+    }
+  }
+  if (!text) return res.json({ aufgaben: [], hinweis: 'Kein Text im Dokument gefunden' });
+
+  // Intelligente Extraktion von Reinigungsaufgaben
+  const aufgaben = extractTasksFromText(text, lv.standort);
+  res.json({ aufgaben, standort: lv.standort, dienstleister_id: lv.dienstleister_id, quelldatei: lv.dateiname });
+});
+
+/**
+ * Extrahiert Reinigungsaufgaben aus dem Text eines Leistungsverzeichnisses.
+ * Erkennt Bereiche/Räume, Tätigkeiten und Frequenzen.
+ */
+function extractTasksFromText(text, standort) {
+  const aufgaben = [];
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 2);
+
+  // Frequenz-Patterns
+  const freqPatterns = [
+    { regex: /\b(t[äa]glich|jeden\s*tag|arbeitst[äa]glich|werkt[äa]glich)\b/i, freq: 'täglich' },
+    { regex: /\b(\d+)\s*[x×]\s*(t[äa]glich|pro\s*tag|\/\s*tag)/i, freq: m => m[1]+'x täglich' },
+    { regex: /\b(\d+)\s*[x×]\s*(w[öo]chentlich|pro\s*woche|\/\s*woche)/i, freq: m => m[1]+'x wöchentlich' },
+    { regex: /\bw[öo]chentlich\b/i, freq: 'wöchentlich' },
+    { regex: /\b(2|zwei)\s*[x×]?\s*(w[öo]chentlich|pro\s*woche)/i, freq: '2x wöchentlich' },
+    { regex: /\b(3|drei)\s*[x×]?\s*(w[öo]chentlich|pro\s*woche)/i, freq: '3x wöchentlich' },
+    { regex: /\bmonatlich\b/i, freq: 'monatlich' },
+    { regex: /\b(\d+)\s*[x×]\s*(monatlich|pro\s*monat|\/\s*monat)/i, freq: m => m[1]+'x monatlich' },
+    { regex: /\bquartal(sw[ei]se|sm[äa][ßs]ig)?\b/i, freq: 'quartalsweise' },
+    { regex: /\bj[äa]hrlich\b/i, freq: 'jährlich' },
+    { regex: /\bhalb\s*j[äa]hrlich\b/i, freq: 'halbjährlich' },
+    { regex: /\bbei\s*bedarf\b/i, freq: 'bei Bedarf' },
+    { regex: /\bnach\s*bedarf\b/i, freq: 'bei Bedarf' },
+  ];
+
+  // Bereich/Raum-Keywords
+  const bereichKeywords = [
+    'flur', 'treppenhaus', 'eingang', 'foyer', 'empfang', 'rezeption',
+    'büro', 'buro', 'verwaltung', 'seminar', 'hörsaal', 'horsaal',
+    'toilette', 'wc', 'sanitär', 'sanitar', 'dusche', 'bad',
+    'küche', 'kuche', 'teeküche', 'teekuche', 'kantine', 'mensa',
+    'keller', 'lager', 'archiv', 'technik', 'server',
+    'aufzug', 'fahrstuhl', 'parkhaus', 'tiefgarage', 'garage',
+    'konferenz', 'besprechung', 'meeting', 'schulung',
+    'bibliothek', 'labor', 'werkstatt', 'umkleide', 'sport', 'aula',
+  ];
+
+  // Reinigungs-Tätigkeits-Keywords (Zeilen die diese enthalten, sind wahrscheinlich Aufgaben)
+  const taskKeywords = [
+    'reinig', 'wisch', 'saug', 'feg', 'kehr', 'putz',
+    'desinf', 'entleer', 'leeren', 'entsorgen', 'müll', 'abfall',
+    'polier', 'pflege', 'trockn', 'nass', 'feucht',
+    'glas', 'fenster', 'spiegel',
+    'staub', 'abstauben', 'wischen',
+    'boden', 'belag', 'teppich', 'parkett', 'fliese',
+    'möbel', 'tisch', 'stuhl', 'schreibtisch', 'regal',
+    'papierkorb', 'mülleimer', 'abfalleimer',
+    'seife', 'handtuch', 'spender', 'nachfüll', 'auffüll',
+    'hygiene', 'sanitär',
+  ];
+
+  let currentBereich = '';
+  let currentRaum = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineLower = line.toLowerCase();
+
+    // Erkenne Bereich/Raum-Überschriften (kurze Zeilen, oft gefolgt von Aufgaben)
+    const isShortHeader = line.length < 60 && !line.endsWith('.') && !line.endsWith(',');
+    const matchesBereich = bereichKeywords.some(k => lineLower.includes(k));
+    if (isShortHeader && matchesBereich && !taskKeywords.some(k => lineLower.includes(k))) {
+      // Prüfe ob es eher ein Bereich oder Raum ist
+      if (/\d/.test(line) || /raum|zimmer|nr/i.test(line)) {
+        currentRaum = line.replace(/^[\d\.\-\s:]+/, '').trim();
+      } else {
+        currentBereich = line.replace(/^[\d\.\-\s:]+/, '').trim();
+        currentRaum = '';
+      }
+      continue;
+    }
+
+    // Prüfe ob Zeile eine Aufgabe ist
+    const isTask = taskKeywords.some(k => lineLower.includes(k));
+    if (!isTask) continue;
+
+    // Zu kurz oder offensichtlich nur ein Header
+    if (line.length < 8) continue;
+
+    // Frequenz erkennen
+    let frequenz = '';
+    for (const fp of freqPatterns) {
+      const match = line.match(fp.regex);
+      if (match) {
+        frequenz = typeof fp.freq === 'function' ? fp.freq(match) : fp.freq;
+        break;
+      }
+    }
+
+    // Tätigkeit bereinigen (Frequenz-Teile ggf. belassen, da informativ)
+    let taetigkeit = line
+      .replace(/^[\d\.\-\)\]\s:]+/, '')  // führende Nummern entfernen
+      .replace(/^\s*[-–•]\s*/, '')        // Aufzählungszeichen
+      .trim();
+
+    if (taetigkeit.length < 5) continue;
+
+    aufgaben.push({
+      taetigkeit,
+      bereich: currentBereich,
+      raum: currentRaum,
+      frequenz,
+      standort: standort || '',
+      wochentag: '',
+      uhrzeit: '',
+      ausfuehrender: '',
+      bemerkung: '',
+    });
+  }
+
+  return aufgaben;
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 //  REINIGUNGSAUFGABEN
 // ════════════════════════════════════════════════════════════════════════════

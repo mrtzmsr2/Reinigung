@@ -777,6 +777,7 @@ async function uploadLV() {
     if (!r.ok) { toast(d.error || 'Fehler', 'error'); return; }
     toast('Hochgeladen'); closeM('m-lv'); renderLV();
     if (d.typ === 'excel' && d.parsedRows) { currentLVId = d.id; showLVPreview(d.id, d.parsedRows); }
+    else if (d.typ === 'pdf') { currentLVId = d.id; showPDFPreview(d.id, d.textPreview); }
   } catch(e) { toast('Upload-Fehler', 'error'); }
 }
 async function previewLV(id) {
@@ -785,13 +786,23 @@ async function previewLV(id) {
     const d = await api('/api/leistungsverzeichnisse/'+id+'/parse');
     document.getElementById('lvp-title').textContent = 'Vorschau';
     if (d.typ === 'excel' && d.rows) showLVPreview(id, d.rows);
-    else { document.getElementById('lvp-body').innerHTML = '<pre style="white-space:pre-wrap;font-size:12px;max-height:400px;overflow:auto">' + esc(d.text || 'Kein Text') + '</pre>'; document.getElementById('lvp-import-btn').style.display = 'none'; }
-    openM('m-lv-preview');
+    else if (d.typ === 'pdf') { showPDFPreview(id, d.text); }
+    else { document.getElementById('lvp-body').innerHTML = '<pre style="white-space:pre-wrap;font-size:12px;max-height:400px;overflow:auto">' + esc(d.text || 'Kein Text') + '</pre>'; document.getElementById('lvp-import-btn').style.display = 'none'; openM('m-lv-preview'); }
   } catch(e) {}
+}
+function showPDFPreview(id, text) {
+  let html = '<pre style="white-space:pre-wrap;font-size:12px;max-height:300px;overflow:auto;background:var(--gray-50);padding:12px;border-radius:var(--radius-sm)">' + esc(text || 'Kein Text') + '</pre>';
+  html += '<div style="margin-top:16px;padding:12px;background:var(--primary-light);background:rgba(0,191,179,0.08);border-radius:var(--radius-sm);border:1px solid var(--primary)">';
+  html += '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:var(--primary-dark)">Aufgaben aus PDF extrahieren</p>';
+  html += '<p style="margin:0 0 12px;font-size:12px;color:var(--gray-500)">Erkennt automatisch Reinigungstätigkeiten, Bereiche, Räume und Frequenzen aus dem Text.</p>';
+  html += '<button class="btn btn-primary btn-sm" onclick="extractFromPDF()">Aufgaben erkennen</button></div>';
+  document.getElementById('lvp-body').innerHTML = html;
+  document.getElementById('lvp-import-btn').style.display = 'none';
+  openM('m-lv-preview');
 }
 function showLVPreview(id, rows) {
   if (!rows || !rows.length) { document.getElementById('lvp-body').innerHTML = '<p>Keine Daten</p>'; document.getElementById('lvp-import-btn').style.display = 'none'; openM('m-lv-preview'); return; }
-  let html = '<div class="table-wrap" style="max-height:380px;overflow:auto"><table><thead><tr>';
+  let html = '<div class="table-wrap" style="max-height:300px;overflow:auto"><table><thead><tr>';
   for (const h of rows[0]) html += '<th style="font-size:11px">' + esc(String(h)) + '</th>';
   html += '</tr></thead><tbody>';
   for (let i=1; i<Math.min(rows.length,80); i++) { html += '<tr>'; for (const c of rows[i]) html += '<td style="font-size:11px">' + esc(String(c)) + '</td>'; html += '</tr>'; }
@@ -801,7 +812,50 @@ function showLVPreview(id, rows) {
   document.getElementById('lvp-import-btn').style.display = kannSchreiben('aufgaben') ? '' : 'none';
   openM('m-lv-preview');
 }
-async function importFromLV() { toast('Import-Funktion wird in einer zukünftigen Version implementiert.', 'warning'); }
+let extractedAufgaben = [];
+async function extractFromPDF() {
+  if (!currentLVId) return;
+  try {
+    const d = await api('/api/leistungsverzeichnisse/'+currentLVId+'/extract-aufgaben', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({}) });
+    if (!d.aufgaben || d.aufgaben.length === 0) { toast('Keine Aufgaben im Text erkannt. Ggf. manuell anlegen.', 'warning'); return; }
+    extractedAufgaben = d.aufgaben;
+    showExtractedTasks(d.aufgaben, d.standort, d.quelldatei);
+  } catch(e) { toast('Fehler bei Extraktion', 'error'); }
+}
+function showExtractedTasks(aufgaben, standort, datei) {
+  let html = '<div style="margin-bottom:12px"><p style="font-size:13px;margin:0"><strong>' + aufgaben.length + ' Aufgaben</strong> erkannt aus <em>' + esc(datei||'') + '</em></p>';
+  html += '<p style="font-size:11px;color:var(--gray-400);margin:4px 0 0">Standort: ' + esc(standort||'—') + ' | Markiere Zeilen die du NICHT importieren willst.</p></div>';
+  html += '<div class="table-wrap" style="max-height:300px;overflow:auto"><table><thead><tr><th style="width:30px"><input type="checkbox" checked onchange="toggleAllExtracted(this)"></th><th>Tätigkeit</th><th>Bereich</th><th>Raum</th><th>Frequenz</th></tr></thead><tbody>';
+  aufgaben.forEach(function(a, idx) {
+    html += '<tr><td><input type="checkbox" checked class="ext-chk" data-idx="'+idx+'"></td>';
+    html += '<td style="font-size:12px">' + esc(a.taetigkeit) + '</td>';
+    html += '<td style="font-size:12px">' + esc(a.bereich||'—') + '</td>';
+    html += '<td style="font-size:12px">' + esc(a.raum||'—') + '</td>';
+    html += '<td style="font-size:12px"><span class="badge badge-info">' + esc(a.frequenz||'—') + '</span></td></tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('lvp-body').innerHTML = html;
+  document.getElementById('lvp-import-btn').style.display = '';
+  document.getElementById('lvp-import-btn').textContent = 'Ausgewählte importieren (' + aufgaben.length + ')';
+}
+function toggleAllExtracted(cb) {
+  document.querySelectorAll('.ext-chk').forEach(function(c) { c.checked = cb.checked; });
+  updateImportCount();
+}
+function updateImportCount() {
+  var count = document.querySelectorAll('.ext-chk:checked').length;
+  document.getElementById('lvp-import-btn').textContent = 'Ausgewählte importieren (' + count + ')';
+}
+async function importFromLV() {
+  if (!currentLVId) return;
+  var selected = [];
+  document.querySelectorAll('.ext-chk:checked').forEach(function(c) { selected.push(extractedAufgaben[parseInt(c.dataset.idx)]); });
+  if (selected.length === 0) { toast('Keine Aufgaben ausgewählt', 'error'); return; }
+  try {
+    var r = await api('/api/leistungsverzeichnisse/'+currentLVId+'/import-aufgaben', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ aufgaben: selected }) });
+    toast(r.imported + ' Aufgaben importiert', 'success'); closeM('m-lv-preview'); renderAufgaben();
+  } catch(e) { toast('Import fehlgeschlagen', 'error'); }
+}
 async function deleteLV(id) { if (!confirm('Leistungsverzeichnis löschen?')) return; await api('/api/leistungsverzeichnisse/'+id, {method:'DELETE'}); toast('Gelöscht'); renderLV(); }
 
 // ═══════════════════════════════════════════════════════════════════════
