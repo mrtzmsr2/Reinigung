@@ -167,6 +167,7 @@ tr:hover td{background:var(--gray-50)}
       <button class="nav-link" id="nav-lv" onclick="navigate('lv')">Leistungsverz.</button>
       <button class="nav-link" id="nav-dienstleister" onclick="navigate('dienstleister')">Dienstleister</button>
       <button class="nav-link" id="nav-kontakte" onclick="navigate('kontakte')">Kontakte</button>
+      <button class="nav-link" id="nav-preise" onclick="navigate('preise')">Preise</button>
       <button class="nav-link" id="nav-standorte" onclick="navigate('standorte')">Standorte</button>
       <button class="nav-link" id="nav-benutzer" onclick="navigate('benutzer')">Benutzer</button>
       <button class="nav-link" id="nav-berechtigungen" onclick="navigate('berechtigungen')">Rechte</button>
@@ -243,6 +244,22 @@ tr:hover td{background:var(--gray-50)}
         <button class="btn btn-secondary btn-sm" onclick="resetFilters('kt')">Zurücksetzen</button>
       </div>
       <div class="table-card"><div class="table-wrap"><table><thead><tr><th>Name</th><th>Rolle</th><th>Dienstleister</th><th>Telefon</th><th>Mobil</th><th>E-Mail</th><th></th></tr></thead><tbody id="kt-tb"></tbody></table></div></div>
+    </div>
+
+    <!-- PREISANPASSUNGEN -->
+    <div class="page" id="page-preise">
+      <div class="page-header"><h2>Preisanpassungen</h2><div id="pa-actions"></div></div>
+      <div class="filter-bar">
+        <select class="form-control" id="pa-dl" onchange="renderPreise()"><option value="">Alle Dienstleister</option></select>
+        <select class="form-control" id="pa-jahr" onchange="renderPreise()"><option value="">Alle Jahre</option></select>
+        <select class="form-control" id="pa-kat" onchange="renderPreise()"><option value="">Alle Kategorien</option></select>
+        <button class="btn btn-secondary btn-sm" onclick="resetFilters('pa')">Zurücksetzen</button>
+        <button class="btn btn-primary btn-sm" onclick="togglePreisView()" id="pa-view-btn">Vergleichsansicht</button>
+      </div>
+      <div id="pa-content">
+        <div class="table-card"><div class="table-wrap"><table><thead><tr><th>Dienstleister</th><th>Jahr</th><th>Kategorie</th><th>Vorher (€)</th><th>Nachher (€)</th><th>Änderung (€)</th><th>Änderung (%)</th><th>Grund</th><th></th></tr></thead><tbody id="pa-tb"></tbody></table></div></div>
+      </div>
+      <div id="pa-vergleich" style="display:none"></div>
     </div>
 
     <!-- STANDORTE -->
@@ -403,6 +420,33 @@ tr:hover td{background:var(--gray-50)}
   </div>
 </div>
 
+<!-- Preisanpassung Modal -->
+<div class="modal-overlay" id="m-preis">
+  <div class="modal">
+    <div class="modal-header"><h3 id="preis-title">Preisanpassung erfassen</h3><button class="modal-close" onclick="closeM('m-preis')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label>Dienstleister *</label><select class="form-control" id="pa-f-dl"></select></div>
+        <div class="form-group"><label>Jahr *</label><input type="number" class="form-control" id="pa-f-jahr" min="2020" max="2040"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Kategorie</label><input type="text" class="form-control" id="pa-f-kat" placeholder="z.B. Unterhaltsreinigung, Glasreinigung, Gesamt" list="pa-kat-list"><datalist id="pa-kat-list"><option value="Gesamt"><option value="Unterhaltsreinigung"><option value="Glasreinigung"><option value="Grundreinigung"><option value="Sonderreinigung"><option value="Außenreinigung"></datalist></div>
+        <div class="form-group"><label>Gültig ab</label><input type="date" class="form-control" id="pa-f-ab"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Betrag vorher (€/Monat) *</label><input type="number" step="0.01" class="form-control" id="pa-f-vorher" oninput="calcPreisChange()"></div>
+        <div class="form-group"><label>Betrag nachher (€/Monat) *</label><input type="number" step="0.01" class="form-control" id="pa-f-nachher" oninput="calcPreisChange()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Änderung</label><input type="text" class="form-control" id="pa-f-diff" readonly style="background:var(--gray-50)"></div>
+        <div class="form-group"><label>Grund</label><input type="text" class="form-control" id="pa-f-grund" placeholder="z.B. Tariferhöhung, Inflation"></div>
+      </div>
+      <div class="form-group"><label>Bemerkung</label><textarea class="form-control" id="pa-f-bem" rows="2"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="savePreis()">Speichern</button><button class="btn btn-secondary" onclick="closeM('m-preis')">Abbrechen</button></div>
+  </div>
+</div>
+
 <!-- Benutzer anlegen Modal -->
 <div class="modal-overlay" id="m-usr">
   <div class="modal">
@@ -526,7 +570,7 @@ async function initApp() {
 }
 
 function applyNavPerms() {
-  const map = { 'nav-aufgaben':'aufgaben','nav-protokolle':'protokolle','nav-lv':'leistungsverzeichnisse','nav-dienstleister':'dienstleister','nav-kontakte':'kontakte','nav-standorte':'standorte','nav-benutzer':'benutzer','nav-berechtigungen':'berechtigungen','nav-auditlog':'auditlog' };
+  const map = { 'nav-aufgaben':'aufgaben','nav-protokolle':'protokolle','nav-lv':'leistungsverzeichnisse','nav-dienstleister':'dienstleister','nav-kontakte':'kontakte','nav-preise':'preisanpassungen','nav-standorte':'standorte','nav-benutzer':'benutzer','nav-berechtigungen':'berechtigungen','nav-auditlog':'auditlog' };
   for (const [id, bereich] of Object.entries(map)) {
     const el = document.getElementById(id);
     if (el) el.style.display = kannLesen(bereich) ? '' : 'none';
@@ -541,7 +585,7 @@ function navigate(page) {
   document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + page)?.classList.add('active');
   updateActions(page);
-  const renderers = { dashboard:renderDashboard, aufgaben:renderAufgaben, protokolle:renderProtokolle, lv:renderLV, dienstleister:renderDL, kontakte:renderKontakte, standorte:renderStandorte, benutzer:renderBenutzer, berechtigungen:renderBerechtigungen, auditlog:renderAuditLog };
+  const renderers = { dashboard:renderDashboard, aufgaben:renderAufgaben, protokolle:renderProtokolle, lv:renderLV, dienstleister:renderDL, kontakte:renderKontakte, preise:renderPreise, standorte:renderStandorte, benutzer:renderBenutzer, berechtigungen:renderBerechtigungen, auditlog:renderAuditLog };
   if (renderers[page]) renderers[page]();
 }
 
@@ -552,7 +596,8 @@ function updateActions(page) {
     'dl-actions': page==='dienstleister' && kannSchreiben('dienstleister') ? '<button class="btn btn-primary btn-sm" onclick="openDLModal()">+ Neuer Dienstleister</button>' : '',
     'kt-actions': page==='kontakte' && kannSchreiben('kontakte') ? '<button class="btn btn-primary btn-sm" onclick="openKontaktModal()">+ Neuer Kontakt</button>' : '',
     'st-actions': page==='standorte' && kannSchreiben('standorte') ? '<button class="btn btn-primary btn-sm" onclick="addStandort()">+ Neuer Standort</button>' : '',
-    'usr-actions': page==='benutzer' && kannSchreiben('benutzer') ? '<button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Neuer Benutzer</button>' : ''
+    'usr-actions': page==='benutzer' && kannSchreiben('benutzer') ? '<button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Neuer Benutzer</button>' : '',
+    'pa-actions': page==='preise' && kannSchreiben('preisanpassungen') ? '<button class="btn btn-primary btn-sm" onclick="openPreisModal()">+ Neue Preisanpassung</button>' : ''
   };
   for (const [id, html] of Object.entries(actions)) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
 }
@@ -565,6 +610,7 @@ function resetFilters(scope) {
   else if (scope === 'dl') { clr('dl-q'); renderDL(); }
   else if (scope === 'kt') { clr('kt-q'); clr('kt-dl'); renderKontakte(); }
   else if (scope === 'al') { clr('al-q'); clr('al-von'); clr('al-bis'); alPage=1; renderAuditLog(); }
+  else if (scope === 'pa') { clr('pa-dl'); clr('pa-jahr'); clr('pa-kat'); renderPreise(); }
 }
 
 // ─── Select Helpers ───────────────────────────────────────────
@@ -802,15 +848,58 @@ function showPDFPreview(id, text) {
 }
 function showLVPreview(id, rows) {
   if (!rows || !rows.length) { document.getElementById('lvp-body').innerHTML = '<p>Keine Daten</p>'; document.getElementById('lvp-import-btn').style.display = 'none'; openM('m-lv-preview'); return; }
-  let html = '<div class="table-wrap" style="max-height:300px;overflow:auto"><table><thead><tr>';
+  let html = '<div class="table-wrap" style="max-height:250px;overflow:auto"><table><thead><tr>';
   for (const h of rows[0]) html += '<th style="font-size:11px">' + esc(String(h)) + '</th>';
   html += '</tr></thead><tbody>';
   for (let i=1; i<Math.min(rows.length,80); i++) { html += '<tr>'; for (const c of rows[i]) html += '<td style="font-size:11px">' + esc(String(c)) + '</td>'; html += '</tr>'; }
   html += '</tbody></table></div>';
   if (rows.length > 80) html += '<p style="color:var(--gray-400);font-size:11px;margin-top:8px">(' + (rows.length-1) + ' Zeilen, Vorschau begrenzt)</p>';
+  // Auto-Mapping: versuche Spalten zuzuordnen
+  if (kannSchreiben('aufgaben') && rows.length > 1) {
+    html += '<div style="margin-top:16px;padding:12px;background:rgba(0,191,179,0.08);border-radius:var(--radius-sm);border:1px solid var(--primary)">';
+    html += '<p style="margin:0 0 8px;font-size:13px;font-weight:600;color:var(--primary-dark)">Spalten-Zuordnung für Import</p>';
+    var headers = rows[0].map(function(h,i){return '<option value="'+i+'">'+esc(String(h))+'</option>';}).join('');
+    var noneOpt = '<option value="-1">— nicht zuordnen —</option>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">';
+    html += '<label>Tätigkeit*: <select id="xlm-taetigkeit" style="width:100%;margin-top:2px">' + noneOpt + headers + '</select></label>';
+    html += '<label>Bereich: <select id="xlm-bereich" style="width:100%;margin-top:2px">' + noneOpt + headers + '</select></label>';
+    html += '<label>Raum: <select id="xlm-raum" style="width:100%;margin-top:2px">' + noneOpt + headers + '</select></label>';
+    html += '<label>Frequenz: <select id="xlm-frequenz" style="width:100%;margin-top:2px">' + noneOpt + headers + '</select></label>';
+    html += '</div>';
+    html += '<button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="mapExcelToAufgaben()">Aufgaben zuordnen</button></div>';
+    currentExcelRows = rows;
+  }
   document.getElementById('lvp-body').innerHTML = html;
-  document.getElementById('lvp-import-btn').style.display = kannSchreiben('aufgaben') ? '' : 'none';
+  document.getElementById('lvp-import-btn').style.display = 'none';
+  // Auto-detect columns
+  if (rows.length > 1) autoMapExcelColumns(rows[0]);
   openM('m-lv-preview');
+}
+var currentExcelRows = [];
+function autoMapExcelColumns(headers) {
+  var tMap = {'taetigkeit':['tätigkeit','taetigkeit','leistung','beschreibung','aufgabe','reinigung','tätigkeit/leistung'], 'bereich':['bereich','gebäude','objekt','gebaude','abteilung'], 'raum':['raum','zimmer','nr','raumnr','raumbezeichnung','nummer'], 'frequenz':['frequenz','häufigkeit','intervall','turnus','rhythmus','haeufigkeit']};
+  for (var field in tMap) {
+    var sel = document.getElementById('xlm-'+field); if (!sel) continue;
+    for (var i=0; i<headers.length; i++) {
+      var h = String(headers[i]).toLowerCase().trim();
+      if (tMap[field].some(function(k){return h.includes(k);})) { sel.value = String(i); break; }
+    }
+  }
+}
+function mapExcelToAufgaben() {
+  var tIdx = parseInt(document.getElementById('xlm-taetigkeit').value);
+  if (tIdx < 0) { toast('Bitte mindestens Tätigkeit-Spalte zuordnen', 'error'); return; }
+  var bIdx = parseInt(document.getElementById('xlm-bereich').value);
+  var rIdx = parseInt(document.getElementById('xlm-raum').value);
+  var fIdx = parseInt(document.getElementById('xlm-frequenz').value);
+  extractedAufgaben = [];
+  for (var i=1; i<currentExcelRows.length; i++) {
+    var row = currentExcelRows[i];
+    var t = String(row[tIdx]||'').trim(); if (!t) continue;
+    extractedAufgaben.push({ taetigkeit:t, bereich: bIdx>=0?String(row[bIdx]||'').trim():'', raum: rIdx>=0?String(row[rIdx]||'').trim():'', frequenz: fIdx>=0?String(row[fIdx]||'').trim():'', standort:'', wochentag:'', uhrzeit:'', ausfuehrender:'', bemerkung:'' });
+  }
+  if (!extractedAufgaben.length) { toast('Keine Aufgaben in den Daten gefunden', 'warning'); return; }
+  showExtractedTasks(extractedAufgaben, '', 'Excel');
 }
 let extractedAufgaben = [];
 async function extractFromPDF() {
@@ -936,6 +1025,161 @@ async function saveKontakt() {
 }
 async function deleteKontakt(id) { if (!confirm('Kontakt löschen?')) return; await api('/api/kontakte/'+id, {method:'DELETE'}); toast('Gelöscht'); renderKontakte(); }
 // ═══════════════════════════════════════════════════════════════════════
+//  PREISANPASSUNGEN
+// ═══════════════════════════════════════════════════════════════════════
+let preisViewMode = 'tabelle';
+let editPreisId = null;
+
+async function renderPreise() {
+  fillDLSelect('pa-dl');
+  fillPreisJahre();
+  const dl = document.getElementById('pa-dl')?.value || '';
+  const jahr = document.getElementById('pa-jahr')?.value || '';
+  const kat = document.getElementById('pa-kat')?.value || '';
+  const params = new URLSearchParams();
+  if (dl) params.set('dienstleister_id', dl); if (jahr) params.set('jahr', jahr); if (kat) params.set('kategorie', kat);
+  try {
+    const data = await api('/api/preisanpassungen?' + params);
+    document.getElementById('pa-tb').innerHTML = data.length ? data.map(function(p) { return '<tr>' +
+      '<td style="font-weight:600">' + esc(p.dienstleister_name||'—') + '</td>' +
+      '<td>' + p.jahr + '</td>' +
+      '<td><span class="badge badge-info">' + esc(p.kategorie) + '</span></td>' +
+      '<td style="text-align:right">' + fmtEuro(p.betrag_vorher) + '</td>' +
+      '<td style="text-align:right">' + fmtEuro(p.betrag_nachher) + '</td>' +
+      '<td style="text-align:right;color:' + (p.aenderung_euro >= 0 ? 'var(--danger)' : 'var(--success)') + ';font-weight:600">' + (p.aenderung_euro > 0 ? '+' : '') + fmtEuro(p.aenderung_euro) + '</td>' +
+      '<td style="text-align:right;color:' + (p.aenderung_prozent >= 0 ? 'var(--danger)' : 'var(--success)') + ';font-weight:600">' + (p.aenderung_prozent > 0 ? '+' : '') + p.aenderung_prozent.toFixed(2) + '%</td>' +
+      '<td style="font-size:12px">' + esc(p.grund||'—') + '</td>' +
+      '<td>' + (kannSchreiben('preisanpassungen') ? '<button class="btn btn-secondary btn-sm btn-icon" onclick="openEditPreis('+p.id+')">&#9998;</button> ' : '') +
+      (kannLoeschen('preisanpassungen') ? '<button class="btn btn-danger btn-sm btn-icon" onclick="deletePreis('+p.id+')">&#128465;</button>' : '') + '</td></tr>'; }).join('')
+      : '<tr><td colspan="9"><div class="empty-state">Keine Preisanpassungen erfasst</div></td></tr>';
+  } catch(e) {}
+}
+
+function fmtEuro(v) { return (parseFloat(v)||0).toLocaleString('de-DE', { minimumFractionDigits:2, maximumFractionDigits:2 }) + ' \u20ac'; }
+
+function fillPreisJahre() {
+  var sel = document.getElementById('pa-jahr'); if (!sel) return;
+  var cur = sel.value;
+  var years = []; var y = new Date().getFullYear();
+  for (var i = y+1; i >= 2020; i--) years.push(i);
+  sel.innerHTML = '<option value="">Alle Jahre</option>' + years.map(function(j){return '<option value="'+j+'">'+j+'</option>';}).join('');
+  if (cur) sel.value = cur;
+}
+
+function openPreisModal() {
+  editPreisId = null;
+  document.getElementById('preis-title').textContent = 'Preisanpassung erfassen';
+  ['pa-f-jahr','pa-f-vorher','pa-f-nachher','pa-f-grund','pa-f-bem','pa-f-ab'].forEach(function(id){ document.getElementById(id).value = ''; });
+  document.getElementById('pa-f-kat').value = 'Gesamt';
+  document.getElementById('pa-f-diff').value = '';
+  document.getElementById('pa-f-jahr').value = new Date().getFullYear();
+  fillDLSelect('pa-f-dl');
+  openM('m-preis');
+}
+
+async function openEditPreis(id) {
+  var data = await api('/api/preisanpassungen'); var p = data.find(function(x){return x.id===id;}); if (!p) return;
+  editPreisId = id;
+  document.getElementById('preis-title').textContent = 'Preisanpassung bearbeiten';
+  await fillDLSelect('pa-f-dl'); document.getElementById('pa-f-dl').value = p.dienstleister_id||'';
+  document.getElementById('pa-f-jahr').value = p.jahr;
+  document.getElementById('pa-f-kat').value = p.kategorie||'Gesamt';
+  document.getElementById('pa-f-vorher').value = p.betrag_vorher;
+  document.getElementById('pa-f-nachher').value = p.betrag_nachher;
+  document.getElementById('pa-f-grund').value = p.grund||'';
+  document.getElementById('pa-f-bem').value = p.bemerkung||'';
+  document.getElementById('pa-f-ab').value = p.gueltig_ab||'';
+  calcPreisChange();
+  openM('m-preis');
+}
+
+function calcPreisChange() {
+  var v = parseFloat(document.getElementById('pa-f-vorher').value) || 0;
+  var n = parseFloat(document.getElementById('pa-f-nachher').value) || 0;
+  var diff = n - v;
+  var pct = v > 0 ? ((n - v) / v * 100).toFixed(2) : '0.00';
+  document.getElementById('pa-f-diff').value = (diff >= 0 ? '+' : '') + diff.toFixed(2) + ' \u20ac (' + (diff >= 0 ? '+' : '') + pct + '%)';
+}
+
+async function savePreis() {
+  var body = {
+    dienstleister_id: document.getElementById('pa-f-dl').value,
+    jahr: document.getElementById('pa-f-jahr').value,
+    kategorie: document.getElementById('pa-f-kat').value || 'Gesamt',
+    betrag_vorher: document.getElementById('pa-f-vorher').value,
+    betrag_nachher: document.getElementById('pa-f-nachher').value,
+    grund: document.getElementById('pa-f-grund').value.trim(),
+    bemerkung: document.getElementById('pa-f-bem').value.trim(),
+    gueltig_ab: document.getElementById('pa-f-ab').value
+  };
+  if (!body.dienstleister_id || !body.jahr) { toast('Dienstleister und Jahr sind Pflichtfelder', 'error'); return; }
+  if (!body.betrag_vorher && !body.betrag_nachher) { toast('Bitte Beträge eingeben', 'error'); return; }
+  try {
+    if (editPreisId) await api('/api/preisanpassungen/'+editPreisId, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    else await api('/api/preisanpassungen', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    toast(editPreisId ? 'Aktualisiert' : 'Gespeichert'); closeM('m-preis'); renderPreise();
+  } catch(e) {}
+}
+
+async function deletePreis(id) { if (!confirm('Preisanpassung l\u00f6schen?')) return; await api('/api/preisanpassungen/'+id, {method:'DELETE'}); toast('Gel\u00f6scht'); renderPreise(); }
+
+async function togglePreisView() {
+  if (preisViewMode === 'tabelle') {
+    preisViewMode = 'vergleich';
+    document.getElementById('pa-content').style.display = 'none';
+    document.getElementById('pa-vergleich').style.display = '';
+    document.getElementById('pa-view-btn').textContent = 'Tabellenansicht';
+    await renderPreisVergleich();
+  } else {
+    preisViewMode = 'tabelle';
+    document.getElementById('pa-content').style.display = '';
+    document.getElementById('pa-vergleich').style.display = 'none';
+    document.getElementById('pa-view-btn').textContent = 'Vergleichsansicht';
+  }
+}
+
+async function renderPreisVergleich() {
+  try {
+    var data = await api('/api/preisanpassungen/vergleich');
+    if (!data.length) { document.getElementById('pa-vergleich').innerHTML = '<div class="empty-state">Keine Daten f\u00fcr Vergleich</div>'; return; }
+    // Gruppieren nach Dienstleister
+    var dlMap = {};
+    data.forEach(function(r) {
+      if (!dlMap[r.dienstleister_name]) dlMap[r.dienstleister_name] = [];
+      dlMap[r.dienstleister_name].push(r);
+    });
+    var html = '';
+    for (var dlName in dlMap) {
+      var rows = dlMap[dlName];
+      html += '<div class="table-card" style="margin-bottom:16px"><div style="padding:16px 20px 8px;font-weight:700;font-size:15px">' + esc(dlName) + '</div>';
+      html += '<div class="table-wrap"><table><thead><tr><th>Jahr</th><th>Kategorie</th><th style="text-align:right">Summe vorher</th><th style="text-align:right">Summe nachher</th><th style="text-align:right">\u00c4nderung (\u20ac)</th><th style="text-align:right">\u00c4nderung (%)</th></tr></thead><tbody>';
+      rows.forEach(function(r) {
+        var color = r.gesamt_prozent >= 0 ? 'var(--danger)' : 'var(--success)';
+        html += '<tr><td><strong>' + r.jahr + '</strong></td><td>' + esc(r.kategorie) + '</td>';
+        html += '<td style="text-align:right">' + fmtEuro(r.summe_vorher) + '</td>';
+        html += '<td style="text-align:right">' + fmtEuro(r.summe_nachher) + '</td>';
+        html += '<td style="text-align:right;color:'+color+';font-weight:600">' + (r.summe_aenderung_euro>0?'+':'') + fmtEuro(r.summe_aenderung_euro) + '</td>';
+        html += '<td style="text-align:right;color:'+color+';font-weight:600">' + (r.gesamt_prozent>0?'+':'') + r.gesamt_prozent.toFixed(2) + '%</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      // Einfaches Balkendiagramm
+      html += '<div style="padding:12px 20px 16px"><div style="font-size:11px;color:var(--gray-400);margin-bottom:8px">Preisentwicklung (% gg. Vorjahr)</div>';
+      rows.forEach(function(r) {
+        var pct = Math.min(Math.abs(r.gesamt_prozent), 30);
+        var barW = Math.max(pct * 3, 2);
+        var barColor = r.gesamt_prozent >= 0 ? 'var(--danger)' : 'var(--success)';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+        html += '<span style="font-size:12px;width:40px">' + r.jahr + '</span>';
+        html += '<div style="height:18px;width:'+barW+'px;background:'+barColor+';border-radius:3px;transition:width .3s"></div>';
+        html += '<span style="font-size:11px;color:'+barColor+';font-weight:600">' + (r.gesamt_prozent>0?'+':'') + r.gesamt_prozent.toFixed(1) + '%</span></div>';
+      });
+      html += '</div></div>';
+    }
+    document.getElementById('pa-vergleich').innerHTML = html;
+  } catch(e) { document.getElementById('pa-vergleich').innerHTML = '<div class="empty-state">Fehler beim Laden</div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  STANDORTE
 // ═══════════════════════════════════════════════════════════════════════
 async function renderStandorte() {
@@ -1025,7 +1269,7 @@ async function saveEditUser() {
 async function renderBerechtigungen() {
   try {
     const data = await api('/api/berechtigungen');
-    const labels = { dashboard:'Dashboard', standorte:'Standorte', dienstleister:'Dienstleister', kontakte:'Kontakte', leistungsverzeichnisse:'Leistungsverz.', aufgaben:'Aufgaben', protokolle:'Protokolle', benutzer:'Benutzer', auditlog:'Audit-Log', berechtigungen:'Berechtigungen' };
+    const labels = { dashboard:'Dashboard', standorte:'Standorte', dienstleister:'Dienstleister', kontakte:'Kontakte', leistungsverzeichnisse:'Leistungsverz.', aufgaben:'Aufgaben', protokolle:'Protokolle', preisanpassungen:'Preisanpassungen', benutzer:'Benutzer', auditlog:'Audit-Log', berechtigungen:'Berechtigungen' };
     document.getElementById('perm-tb').innerHTML = data.map(p => '<tr>' +
       '<td><span class="badge badge-primary">' + esc(p.rolle) + '</span></td>' +
       '<td>' + (labels[p.bereich] || p.bereich) + '</td>' +

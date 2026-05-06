@@ -155,6 +155,24 @@ function createSchema() {
     CREATE INDEX IF NOT EXISTS idx_pr_standort ON protokolle(standort);
     CREATE INDEX IF NOT EXISTS idx_pr_datum   ON protokolle(datum);
     CREATE INDEX IF NOT EXISTS idx_al_aktion  ON audit_log(aktion);
+
+    CREATE TABLE IF NOT EXISTS preisanpassungen (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      dienstleister_id INTEGER NOT NULL,
+      jahr            INTEGER NOT NULL,
+      kategorie       TEXT DEFAULT 'Gesamt',
+      betrag_vorher   REAL DEFAULT 0,
+      betrag_nachher  REAL DEFAULT 0,
+      aenderung_euro  REAL DEFAULT 0,
+      aenderung_prozent REAL DEFAULT 0,
+      grund           TEXT DEFAULT '',
+      bemerkung       TEXT DEFAULT '',
+      gueltig_ab      TEXT DEFAULT '',
+      erstellt        TEXT NOT NULL,
+      erstellt_von    TEXT DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_pa_dl ON preisanpassungen(dienstleister_id);
+    CREATE INDEX IF NOT EXISTS idx_pa_jahr ON preisanpassungen(jahr);
   `);
 }
 
@@ -190,7 +208,7 @@ function seed() {
   // Berechtigungen
   if (get('SELECT COUNT(*) AS c FROM berechtigungen').c === 0) {
     console.log('Seeding Berechtigungen …');
-    const BEREICHE = ['dashboard','standorte','dienstleister','kontakte','leistungsverzeichnisse','aufgaben','protokolle','benutzer','auditlog','berechtigungen'];
+    const BEREICHE = ['dashboard','standorte','dienstleister','kontakte','leistungsverzeichnisse','aufgaben','protokolle','preisanpassungen','benutzer','auditlog','berechtigungen'];
     const ROLLEN = {
       'Super-Admin'    : { lesen:1, schreiben:1, loeschen:1 },
       'Standortadmin'  : { lesen:1, schreiben:1, loeschen:0 },

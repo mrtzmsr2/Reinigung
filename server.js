@@ -857,6 +857,69 @@ app.get('/api/auditlog', requirePerm('auditlog','lesen'), (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+//  PREISANPASSUNGEN
+// ════════════════════════════════════════════════════════════════════════════
+app.get('/api/preisanpassungen', requirePerm('preisanpassungen','lesen'), (req, res) => {
+  const { dienstleister_id='', jahr='', kategorie='' } = req.query;
+  const where = ['1=1']; const params = [];
+  if (dienstleister_id) { where.push('p.dienstleister_id = ?'); params.push(parseInt(dienstleister_id)); }
+  if (jahr) { where.push('p.jahr = ?'); params.push(parseInt(jahr)); }
+  if (kategorie) { where.push('p.kategorie = ?'); params.push(kategorie); }
+  const rows = all(`SELECT p.*, d.name AS dienstleister_name FROM preisanpassungen p LEFT JOIN dienstleister d ON d.id = p.dienstleister_id WHERE ${where.join(' AND ')} ORDER BY p.jahr DESC, d.name`, ...params);
+  res.json(rows);
+});
+
+app.get('/api/preisanpassungen/vergleich', requirePerm('preisanpassungen','lesen'), (req, res) => {
+  // Aggregierte Daten pro Dienstleister und Jahr für Vergleichsansicht
+  const rows = all(`SELECT p.dienstleister_id, d.name AS dienstleister_name, p.jahr, p.kategorie,
+    SUM(p.betrag_vorher) AS summe_vorher, SUM(p.betrag_nachher) AS summe_nachher,
+    SUM(p.aenderung_euro) AS summe_aenderung_euro,
+    CASE WHEN SUM(p.betrag_vorher) > 0 THEN ROUND((SUM(p.betrag_nachher) - SUM(p.betrag_vorher)) * 100.0 / SUM(p.betrag_vorher), 2) ELSE 0 END AS gesamt_prozent
+    FROM preisanpassungen p LEFT JOIN dienstleister d ON d.id = p.dienstleister_id
+    GROUP BY p.dienstleister_id, p.jahr ORDER BY p.jahr DESC, d.name`);
+  res.json(rows);
+});
+
+app.post('/api/preisanpassungen', requirePerm('preisanpassungen','schreiben'), (req, res) => {
+  const { dienstleister_id, jahr, kategorie='Gesamt', betrag_vorher=0, betrag_nachher=0, grund='', bemerkung='', gueltig_ab='' } = req.body;
+  if (!dienstleister_id || !jahr) return res.status(400).json({ error: 'Dienstleister und Jahr erforderlich' });
+  const vorher = parseFloat(betrag_vorher) || 0;
+  const nachher = parseFloat(betrag_nachher) || 0;
+  const euro = Math.round((nachher - vorher) * 100) / 100;
+  const prozent = vorher > 0 ? Math.round((nachher - vorher) * 10000 / vorher) / 100 : 0;
+  run(`INSERT INTO preisanpassungen (dienstleister_id,jahr,kategorie,betrag_vorher,betrag_nachher,aenderung_euro,aenderung_prozent,grund,bemerkung,gueltig_ab,erstellt,erstellt_von)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      parseInt(dienstleister_id), parseInt(jahr), kategorie, vorher, nachher, euro, prozent, grund, bemerkung, gueltig_ab, nowISO(), userName(req));
+  audit('PREIS_NEU', '', userName(req), `Preisanpassung ${jahr}: ${kategorie} ${vorher}€ → ${nachher}€ (${euro > 0 ? '+' : ''}${euro}€ / ${prozent > 0 ? '+' : ''}${prozent}%)`);
+  save();
+  res.json({ success: true, id: get('SELECT last_insert_rowid() AS id').id });
+});
+
+app.put('/api/preisanpassungen/:id', requirePerm('preisanpassungen','schreiben'), (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!get('SELECT id FROM preisanpassungen WHERE id = ?', id)) return res.status(404).json({ error: 'Nicht gefunden' });
+  const { dienstleister_id, jahr, kategorie='Gesamt', betrag_vorher=0, betrag_nachher=0, grund='', bemerkung='', gueltig_ab='' } = req.body;
+  const vorher = parseFloat(betrag_vorher) || 0;
+  const nachher = parseFloat(betrag_nachher) || 0;
+  const euro = Math.round((nachher - vorher) * 100) / 100;
+  const prozent = vorher > 0 ? Math.round((nachher - vorher) * 10000 / vorher) / 100 : 0;
+  run('UPDATE preisanpassungen SET dienstleister_id=?,jahr=?,kategorie=?,betrag_vorher=?,betrag_nachher=?,aenderung_euro=?,aenderung_prozent=?,grund=?,bemerkung=?,gueltig_ab=? WHERE id=?',
+      parseInt(dienstleister_id), parseInt(jahr), kategorie, vorher, nachher, euro, prozent, grund, bemerkung, gueltig_ab, id);
+  audit('PREIS_EDIT', String(id), userName(req), `Preisanpassung bearbeitet`);
+  save();
+  res.json({ success: true });
+});
+
+app.delete('/api/preisanpassungen/:id', requirePerm('preisanpassungen','loeschen'), (req, res) => {
+  const id = parseInt(req.params.id);
+  if (!get('SELECT id FROM preisanpassungen WHERE id = ?', id)) return res.status(404).json({ error: 'Nicht gefunden' });
+  run('DELETE FROM preisanpassungen WHERE id = ?', id);
+  audit('PREIS_DEL', String(id), userName(req), 'Preisanpassung gelöscht');
+  save();
+  res.json({ success: true });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD-STATS
 // ════════════════════════════════════════════════════════════════════════════
 app.get('/api/stats', (req, res) => {
